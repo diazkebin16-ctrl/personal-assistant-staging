@@ -4,11 +4,13 @@ import type { BackendClient } from "../api/client";
 import type { Permission } from "../api/contracts";
 import type { MfaState, TotpEnrollment } from "../auth/authGateway";
 import type { SessionController } from "../session/sessionController";
+import { useExternalState } from "../state/useExternalState";
 
 export function PermissionsView(props: {
   client: BackendClient;
   session: SessionController;
 }) {
+  const sessionState = useExternalState(props.session);
   const [permissions, setPermissions] = useState<readonly Permission[]>([]);
   const [mfa, setMfa] = useState<MfaState | null>(null);
   const [enrollment, setEnrollment] = useState<TotpEnrollment | null>(null);
@@ -139,9 +141,9 @@ export function PermissionsView(props: {
   };
 
   const serverAuthenticationLevel =
-    props.session.state.identity?.authentication_level === "AAL2"
+    sessionState.identity?.authentication_level === "AAL2"
       ? "aal2"
-      : props.session.state.identity?.authentication_level === "AAL1"
+      : sessionState.identity?.authentication_level === "AAL1"
         ? "aal1"
         : null;
 

@@ -205,3 +205,49 @@ def build_default_catalog() -> ModelCatalog:
 
 
 DEFAULT_MODEL_CATALOG = build_default_catalog()
+
+
+_OPENAI_LUNA_PRICING = PricingMetadata(
+    currency="USD",
+    input_microunits_per_million_tokens=200_000,
+    output_microunits_per_million_tokens=1_200_000,
+    pricing_version="openai-2026-09",
+    effective_date=date(2026, 9, 3),
+)
+
+
+def build_openai_staging_catalog() -> ModelCatalog:
+    """Single-provider staging catalog; production policy remains explicit."""
+    providers = (
+        ProviderDefinition(
+            key="openai",
+            enabled=True,
+            max_sensitivity=DataSensitivity.PRIVATE,
+            private_data_approved=True,
+        ),
+    )
+    models = (
+        ModelDefinition(
+            provider_key="openai",
+            model_id="gpt-5.6-luna",
+            model_class=ModelClass.FAST,
+            enabled=True,
+            capabilities=frozenset(
+                {
+                    ModelCapability.TEXT_GENERATION,
+                    ModelCapability.STRUCTURED_OUTPUT,
+                }
+            ),
+            context_limit=1_050_000,
+            output_limit=128_000,
+            max_sensitivity=DataSensitivity.PRIVATE,
+            quality_tier=QualityTier.FAST,
+            latency_tier=LatencyTier.LOW,
+            pricing=_OPENAI_LUNA_PRICING,
+            fallback_priority=10,
+        ),
+    )
+    return ModelCatalog(providers, models)
+
+
+OPENAI_STAGING_CATALOG = build_openai_staging_catalog()

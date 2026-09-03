@@ -106,7 +106,6 @@ export function PermissionsView(props: {
         "create",
         "update",
         "archive",
-        "delete",
       ]);
       await refresh();
       setMessage("Memory access was explicitly granted by the authenticated user.");

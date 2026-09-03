@@ -215,9 +215,25 @@ _OPENAI_LUNA_PRICING = PricingMetadata(
     effective_date=date(2026, 9, 3),
 )
 
+_OPENAI_TERRA_PRICING = PricingMetadata(
+    currency="USD",
+    input_microunits_per_million_tokens=2_000_000,
+    output_microunits_per_million_tokens=12_000_000,
+    pricing_version="openai-2026-09",
+    effective_date=date(2026, 9, 3),
+)
+
+_OPENAI_SOL_PRICING = PricingMetadata(
+    currency="USD",
+    input_microunits_per_million_tokens=4_000_000,
+    output_microunits_per_million_tokens=20_000_000,
+    pricing_version="openai-2026-09",
+    effective_date=date(2026, 9, 3),
+)
+
 
 def build_openai_staging_catalog() -> ModelCatalog:
-    """Single-provider staging catalog; production policy remains explicit."""
+    """OpenAI staging catalog with complexity-aware quality routing."""
     providers = (
         ProviderDefinition(
             key="openai",
@@ -226,18 +242,21 @@ def build_openai_staging_catalog() -> ModelCatalog:
             private_data_approved=True,
         ),
     )
+
+    capabilities = frozenset(
+        {
+            ModelCapability.TEXT_GENERATION,
+            ModelCapability.STRUCTURED_OUTPUT,
+        }
+    )
+
     models = (
         ModelDefinition(
             provider_key="openai",
             model_id="gpt-5.6-luna",
             model_class=ModelClass.FAST,
             enabled=True,
-            capabilities=frozenset(
-                {
-                    ModelCapability.TEXT_GENERATION,
-                    ModelCapability.STRUCTURED_OUTPUT,
-                }
-            ),
+            capabilities=capabilities,
             context_limit=1_050_000,
             output_limit=128_000,
             max_sensitivity=DataSensitivity.PRIVATE,
@@ -246,7 +265,36 @@ def build_openai_staging_catalog() -> ModelCatalog:
             pricing=_OPENAI_LUNA_PRICING,
             fallback_priority=10,
         ),
+        ModelDefinition(
+            provider_key="openai",
+            model_id="gpt-5.6-terra",
+            model_class=ModelClass.STANDARD,
+            enabled=True,
+            capabilities=capabilities,
+            context_limit=1_050_000,
+            output_limit=128_000,
+            max_sensitivity=DataSensitivity.PRIVATE,
+            quality_tier=QualityTier.STANDARD,
+            latency_tier=LatencyTier.NORMAL,
+            pricing=_OPENAI_TERRA_PRICING,
+            fallback_priority=20,
+        ),
+        ModelDefinition(
+            provider_key="openai",
+            model_id="gpt-5.6-sol",
+            model_class=ModelClass.ADVANCED,
+            enabled=True,
+            capabilities=capabilities,
+            context_limit=1_050_000,
+            output_limit=128_000,
+            max_sensitivity=DataSensitivity.PRIVATE,
+            quality_tier=QualityTier.ADVANCED,
+            latency_tier=LatencyTier.HIGH,
+            pricing=_OPENAI_SOL_PRICING,
+            fallback_priority=30,
+        ),
     )
+
     return ModelCatalog(providers, models)
 
 

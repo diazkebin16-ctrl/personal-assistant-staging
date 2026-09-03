@@ -148,6 +148,26 @@ export class ConversationController {
           epoch === this.#epoch &&
           this.#state.selectedId === logical.conversationId
         ) {
+          if (classified.category === "CONFLICT") {
+            return Promise.all([
+              this.#client.getConversation(logical.conversationId),
+              this.#client.listMessages(logical.conversationId),
+            ]).then(([conversation, messages]) => {
+              if (
+                epoch === this.#epoch &&
+                this.#state.selectedId === logical.conversationId
+              ) {
+                this.#set({
+                  selectedId: conversation.id,
+                  conversation,
+                  messages,
+                  pending: null,
+                  error: null,
+                });
+              }
+              throw classified;
+            });
+          }
           const retryable =
             classified.category === "NETWORK_OFFLINE" ||
             classified.category === "TIMEOUT" ||

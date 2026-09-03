@@ -118,7 +118,7 @@ export class SessionController {
     if (
       !this.#snapshot ||
       !identity.authenticated ||
-      identity.user_id !== this.#snapshot.subject
+      identity.auth_user_id !== this.#snapshot.subject
     ) {
       this.expire();
       throw new Error(

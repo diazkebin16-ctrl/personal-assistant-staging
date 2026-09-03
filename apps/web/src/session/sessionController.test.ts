@@ -28,7 +28,7 @@ describe("session lifecycle", () => {
     });
     await controller.signIn("user@example.com", "password");
     expect(() =>
-      controller.acceptIdentity({ ...identity, user_id: OTHER_USER_ID }),
+      controller.acceptIdentity({ ...identity, auth_user_id: OTHER_USER_ID }),
     ).toThrow("did not match");
     expect(controller.state.status).toBe("EXPIRED");
     expect(clear).toHaveBeenCalled();

@@ -106,6 +106,7 @@ class MeResponse(BaseModel):
     """Minimal safe current-identity response."""
 
     user_id: UUID
+    auth_user_id: UUID
     display_name: str | None
     device_id: UUID | None
     authenticated: bool
@@ -115,6 +116,7 @@ class MeResponse(BaseModel):
     def from_identity(cls, identity: IdentityContext) -> "MeResponse":
         return cls(
             user_id=identity.user_id,
+            auth_user_id=identity.auth_user_id,
             display_name=identity.display_name,
             device_id=identity.device_id,
             authenticated=identity.authenticated,

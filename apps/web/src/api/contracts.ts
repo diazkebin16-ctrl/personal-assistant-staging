@@ -2,6 +2,7 @@ export type UUID = string;
 
 export type Identity = Readonly<{
   user_id: UUID;
+  auth_user_id: UUID;
   display_name: string | null;
   device_id: UUID | null;
   authenticated: boolean;

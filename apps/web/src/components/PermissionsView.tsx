@@ -96,7 +96,7 @@ export function PermissionsView(props: {
   };
 
   const enableMemory = async () => {
-    if (busy || mfa?.currentLevel !== "aal2") return;
+    if (busy || serverAuthenticationLevel !== "aal2") return;
     setBusy(true);
     setError(null);
     setMessage(null);
@@ -119,7 +119,7 @@ export function PermissionsView(props: {
   };
 
   const enableMemoryDelete = async () => {
-    if (busy || mfa?.currentLevel !== "aal2") return;
+    if (busy || serverAuthenticationLevel !== "aal2") return;
     setBusy(true);
     setError(null);
     setMessage(null);
@@ -137,6 +137,13 @@ export function PermissionsView(props: {
       setBusy(false);
     }
   };
+
+  const serverAuthenticationLevel =
+    props.session.state.identity?.authentication_level === "AAL2"
+      ? "aal2"
+      : props.session.state.identity?.authentication_level === "AAL1"
+        ? "aal1"
+        : null;
 
   const activeKeys = new Set(
     permissions
@@ -167,12 +174,12 @@ export function PermissionsView(props: {
         <div>
           <h3>Strong authentication</h3>
           <p>
-            Current level: {mfa?.currentLevel ?? "checking"} · Next level:{" "}
-            {mfa?.nextLevel ?? "checking"}
+            Current level: {serverAuthenticationLevel ?? "unavailable"} · Next level:{" "}
+            {mfa?.nextLevel ?? "unavailable"}
           </p>
         </div>
 
-        {mfa?.currentLevel !== "aal2" &&
+        {serverAuthenticationLevel !== "aal2" &&
         mfa?.verifiedTotpFactorIds.length === 0 &&
         !enrollment ? (
           <button
@@ -196,7 +203,7 @@ export function PermissionsView(props: {
           </div>
         ) : null}
 
-        {mfa?.currentLevel !== "aal2" &&
+        {serverAuthenticationLevel !== "aal2" &&
         (enrollment || mfa?.verifiedTotpFactorIds.length) ? (
           <div>
             <label>
@@ -220,7 +227,7 @@ export function PermissionsView(props: {
           </div>
         ) : null}
 
-        {mfa?.currentLevel === "aal2" && !memoryReady ? (
+        {serverAuthenticationLevel === "aal2" && !memoryReady ? (
           <button
             className="primary-button"
             disabled={busy}
@@ -237,7 +244,7 @@ export function PermissionsView(props: {
           </p>
         ) : null}
 
-        {mfa?.currentLevel === "aal2" &&
+        {serverAuthenticationLevel === "aal2" &&
         memoryReady &&
         !memoryDeleteReady ? (
           <button

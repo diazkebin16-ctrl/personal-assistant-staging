@@ -168,7 +168,7 @@ function AuthenticatedWorkspace(props: {
           ) : null}
           {view === "MEMORY" ? <MemoryView client={props.client} /> : null}
           {view === "PERMISSIONS" ? (
-            <PermissionsView client={props.client} />
+            <PermissionsView client={props.client} session={props.session} />
           ) : null}
         </main>
       </div>

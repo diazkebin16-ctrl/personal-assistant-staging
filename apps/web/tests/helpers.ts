@@ -8,6 +8,8 @@ import type {
   AuthEvent,
   AuthGateway,
   AuthSnapshot,
+  MfaState,
+  TotpEnrollment,
 } from "../src/auth/authGateway";
 import type { SessionChannel } from "../src/session/sessionController";
 
@@ -109,6 +111,31 @@ export class FakeAuthGateway implements AuthGateway {
   }
 
   getSnapshot(): Promise<AuthSnapshot | null> {
+    return Promise.resolve(this.snapshot);
+  }
+
+  getMfaState(): Promise<MfaState> {
+    return Promise.resolve(
+      Object.freeze({
+        currentLevel: "aal1",
+        nextLevel: "aal1",
+        verifiedTotpFactorIds: Object.freeze([]),
+      }),
+    );
+  }
+
+  enrollTotp(): Promise<TotpEnrollment> {
+    return Promise.resolve(
+      Object.freeze({
+        factorId: "factor-test",
+        qrCode: "data:image/svg+xml,test",
+        secret: "TESTSECRET",
+      }),
+    );
+  }
+
+  verifyTotp(): Promise<AuthSnapshot> {
+    if (!this.snapshot) return Promise.reject(new Error("denied"));
     return Promise.resolve(this.snapshot);
   }
 

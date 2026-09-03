@@ -183,6 +183,39 @@ describe("typed backend client", () => {
     expect(body).not.toHaveProperty("sensitivity");
   });
 
+  it("grants memory permission only through the canonical server endpoint", async () => {
+    const fetcher = vi
+      .fn<typeof fetch>()
+      .mockResolvedValue(jsonResponse({ id: "permission" }));
+
+    await clientWith(fetcher).grantMemoryPermission("memory.read", ["read"]);
+
+    expect(fetcher.mock.calls[0]?.[0]).toBe("/api/v1/permissions/grant");
+
+    const rawBody = fetcher.mock.calls[0]?.[1]?.body;
+    expect(typeof rawBody).toBe("string");
+
+    const body = JSON.parse(
+      typeof rawBody === "string" ? rawBody : "",
+    ) as Record<string, unknown>;
+
+    expect(body).toEqual({
+      capability_key: "memory.read",
+      scope: {
+        resource_type: "memory",
+        operations: ["read"],
+      },
+      confirmation_policy: "NEVER",
+      auto_execute: false,
+      reason: "User explicitly enabled memory access from the web client.",
+    });
+
+    expect(body).not.toHaveProperty("user_id");
+    expect(body).not.toHaveProperty("authentication_level");
+    expect(body).not.toHaveProperty("grant_source");
+    expect(body).not.toHaveProperty("permission_id");
+  });
+
   it("uses the canonical confirmation routes without local evidence", async () => {
     const fetcher = vi
       .fn<typeof fetch>()

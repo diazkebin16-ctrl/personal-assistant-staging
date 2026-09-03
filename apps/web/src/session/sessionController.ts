@@ -1,5 +1,10 @@
 import type { Identity } from "../api/contracts";
-import type { AuthGateway, AuthSnapshot } from "../auth/authGateway";
+import type {
+  AuthGateway,
+  AuthSnapshot,
+  MfaState,
+  TotpEnrollment,
+} from "../auth/authGateway";
 
 export type SessionStatus =
   | "SIGNED_OUT"
@@ -96,6 +101,18 @@ export class SessionController {
     if (!current) return null;
     this.#snapshot = current;
     return current.accessToken;
+  }
+
+  getMfaState(): Promise<MfaState> {
+    return this.#auth.getMfaState();
+  }
+
+  enrollTotp(): Promise<TotpEnrollment> {
+    return this.#auth.enrollTotp();
+  }
+
+  async verifyTotp(factorId: string, code: string): Promise<void> {
+    this.#snapshot = await this.#auth.verifyTotp(factorId, code);
   }
 
   async signIn(email: string, password: string): Promise<void> {

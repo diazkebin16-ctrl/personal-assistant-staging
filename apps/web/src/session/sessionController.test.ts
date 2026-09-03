@@ -100,6 +100,25 @@ describe("session lifecycle", () => {
     controller.dispose();
   });
 
+  it("updates only the in-memory token after TOTP verification", async () => {
+    const auth = new FakeAuthGateway();
+    const controller = new SessionController(auth, {
+      channel: new FakeSessionChannel(),
+    });
+
+    await controller.signIn("user@example.com", "password");
+    controller.acceptIdentity(identity);
+
+    const before = controller.state;
+
+    await controller.verifyTotp("factor-test", "123456");
+
+    expect(controller.state).toEqual(before);
+    await expect(controller.getToken()).resolves.toBe("memory-only-token");
+
+    controller.dispose();
+  });
+
   it("responds to multi-tab logout without rebroadcast loops", async () => {
     const auth = new FakeAuthGateway();
     const channel = new FakeSessionChannel();

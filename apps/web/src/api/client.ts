@@ -219,6 +219,32 @@ export class BackendClient {
     return this.#request("/permissions", { signal });
   }
 
+  grantMemoryPermission(
+    capabilityKey: "memory.read" | "memory.write",
+    operations: readonly string[],
+    signal?: AbortSignal,
+  ): Promise<Permission> {
+    if (operations.length === 0) {
+      return Promise.reject(
+        new ApiError("VALIDATION_ERROR", "Permission operations are required."),
+      );
+    }
+    return this.#request("/permissions/grant", {
+      method: "POST",
+      body: {
+        capability_key: capabilityKey,
+        scope: {
+          resource_type: "memory",
+          operations,
+        },
+        confirmation_policy: "NEVER",
+        auto_execute: false,
+        reason: "User explicitly enabled memory access from the web client.",
+      },
+      signal,
+    });
+  }
+
   approveConfirmation(
     confirmationId: UUID,
     signal?: AbortSignal,

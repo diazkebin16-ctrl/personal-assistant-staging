@@ -1,0 +1,42 @@
+"""Canonical Memory Core vocabulary."""
+
+from enum import StrEnum
+
+
+class MemoryClass(StrEnum):
+    TEMPORARY_CONTEXT = "TEMPORARY_CONTEXT"
+    OPERATIONAL = "OPERATIONAL"
+    PERSISTENT_PREFERENCE = "PERSISTENT_PREFERENCE"
+    HISTORICAL_DECISION = "HISTORICAL_DECISION"
+    DISCARDABLE = "DISCARDABLE"
+
+
+class MemoryStatus(StrEnum):
+    ACTIVE = "ACTIVE"
+    ARCHIVED = "ARCHIVED"
+    EXPIRED = "EXPIRED"
+    DELETED = "DELETED"
+
+
+class MemorySourceType(StrEnum):
+    USER_EXPLICIT = "USER_EXPLICIT"
+    SYSTEM = "SYSTEM"
+    TASK = "TASK"
+    DEVICE = "DEVICE"
+    IMPORT = "IMPORT"
+    FUTURE_AI_PROPOSAL = "FUTURE_AI_PROPOSAL"
+
+
+class MemoryEventType(StrEnum):
+    CREATED = "CREATED"
+    UPDATED = "UPDATED"
+    ARCHIVED = "ARCHIVED"
+    EXPIRED = "EXPIRED"
+    DELETED = "DELETED"
+    DEDUPLICATED = "DEDUPLICATED"
+
+
+class MemoryActorType(StrEnum):
+    USER = "USER"
+    SYSTEM = "SYSTEM"
+    DEVICE = "DEVICE"

@@ -1,0 +1,117 @@
+name: CI
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
+        with:
+          enable-cache: true
+          version: "0.11.33"
+
+      - name: Install dependencies
+        run: uv sync --locked --all-extras
+
+      - name: Check formatting
+        run: uv run ruff format --check .
+
+      - name: Lint
+        run: uv run ruff check .
+
+      - name: Type check
+        run: uv run mypy backend shared scripts tests
+
+      - name: Validate migrations
+        run: uv run python -m scripts.validate_migrations
+
+      - name: Run security tests
+        run: uv run pytest tests/security
+
+      - name: Run tests
+        run: uv run pytest
+
+      - name: Compile Python sources
+        run: uv run python -m compileall -q backend shared scripts tests
+
+      - name: Validate application startup
+        run: uv run python -c "from backend.app.main import app; assert app.version == '0.13.0'"
+
+      - name: Validate health endpoints
+        run: uv run pytest tests/integration/test_health.py
+
+      - name: Audit Python dependencies
+        run: uvx pip-audit --path .venv/lib/python3.12/site-packages
+
+  android:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@d3e32c634061b0eb13f2d386db7a5c4e2294a58c # v5.0.0
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@07976c6290703d34c16d382cb36445f98bb43b1f # v3.2.2
+
+      - name: Android and KMP validation
+        working-directory: mobile
+        run: ./gradlew --no-daemon :shared:desktopTest :androidApp:testLocalDebugUnitTest :androidApp:lintLocalDebug :androidApp:assembleLocalDebug :androidApp:assembleProductionRelease
+
+      - name: Validate release artifact rules
+        run: uv run pytest tests/unit/test_release_packaging.py
+
+  web:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/web
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1f # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: apps/web/package-lock.json
+
+      - name: Install locked dependencies
+        run: npm ci
+
+      - name: Validate web source and build
+        run: npm run format && npm run lint && npm run typecheck && npm test && npm run build
+
+      - name: Install controlled browser
+        run: npx playwright install --with-deps chromium
+
+      - name: Run controlled browser E2E
+        run: npm run test:e2e
+
+      - name: Audit web dependencies
+        run: npm audit --audit-level=low

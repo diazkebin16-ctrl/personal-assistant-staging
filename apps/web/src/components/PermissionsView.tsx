@@ -118,6 +118,26 @@ export function PermissionsView(props: {
     }
   };
 
+  const enableMemoryDelete = async () => {
+    if (busy || mfa?.currentLevel !== "aal2") return;
+    setBusy(true);
+    setError(null);
+    setMessage(null);
+    try {
+      await props.client.grantMemoryDeletePermission();
+      await refresh();
+      setMessage(
+        "Memory deletion permission was explicitly granted. Every deletion still requires server confirmation.",
+      );
+    } catch {
+      setError(
+        "Memory deletion permission was not granted. The server kept the operation denied.",
+      );
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const activeKeys = new Set(
     permissions
       .filter((permission) => permission.status === "ACTIVE")
@@ -125,6 +145,7 @@ export function PermissionsView(props: {
   );
   const memoryReady =
     activeKeys.has("memory.read") && activeKeys.has("memory.write");
+  const memoryDeleteReady = activeKeys.has("memory.delete");
 
   return (
     <section aria-labelledby="permissions-title" className="utility-view">
@@ -213,6 +234,26 @@ export function PermissionsView(props: {
         {memoryReady ? (
           <p role="status">
             Memory read and write permissions are active.
+          </p>
+        ) : null}
+
+        {mfa?.currentLevel === "aal2" &&
+        memoryReady &&
+        !memoryDeleteReady ? (
+          <button
+            className="danger-button"
+            disabled={busy}
+            onClick={() => void enableMemoryDelete()}
+            type="button"
+          >
+            Enable memory deletion
+          </button>
+        ) : null}
+
+        {memoryDeleteReady ? (
+          <p role="status">
+            Memory deletion is enabled. Every deletion requires a separate
+            server confirmation.
           </p>
         ) : null}
       </article>

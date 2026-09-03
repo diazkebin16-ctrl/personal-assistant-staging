@@ -245,6 +245,25 @@ export class BackendClient {
     });
   }
 
+  grantMemoryDeletePermission(
+    signal?: AbortSignal,
+  ): Promise<Permission> {
+    return this.#request("/permissions/grant", {
+      method: "POST",
+      body: {
+        capability_key: "memory.delete",
+        scope: {
+          resource_type: "memory",
+          operations: ["delete"],
+        },
+        confirmation_policy: "EVERY_TIME",
+        auto_execute: false,
+        reason: "User explicitly enabled privacy deletion from the web client.",
+      },
+      signal,
+    });
+  }
+
   approveConfirmation(
     confirmationId: UUID,
     signal?: AbortSignal,

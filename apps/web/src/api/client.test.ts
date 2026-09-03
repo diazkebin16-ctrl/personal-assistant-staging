@@ -216,6 +216,37 @@ describe("typed backend client", () => {
     expect(body).not.toHaveProperty("permission_id");
   });
 
+  it("grants memory deletion separately with confirmation on every use", async () => {
+    const fetcher = vi
+      .fn<typeof fetch>()
+      .mockResolvedValue(jsonResponse({ id: "permission-delete" }));
+
+    await clientWith(fetcher).grantMemoryDeletePermission();
+
+    expect(fetcher.mock.calls[0]?.[0]).toBe("/api/v1/permissions/grant");
+
+    const rawBody = fetcher.mock.calls[0]?.[1]?.body;
+    expect(typeof rawBody).toBe("string");
+
+    const body = JSON.parse(
+      typeof rawBody === "string" ? rawBody : "",
+    ) as Record<string, unknown>;
+
+    expect(body).toEqual({
+      capability_key: "memory.delete",
+      scope: {
+        resource_type: "memory",
+        operations: ["delete"],
+      },
+      confirmation_policy: "EVERY_TIME",
+      auto_execute: false,
+      reason: "User explicitly enabled privacy deletion from the web client.",
+    });
+
+    expect(body).not.toHaveProperty("authentication_level");
+    expect(body).not.toHaveProperty("confirmation_id");
+  });
+
   it("uses the canonical confirmation routes without local evidence", async () => {
     const fetcher = vi
       .fn<typeof fetch>()

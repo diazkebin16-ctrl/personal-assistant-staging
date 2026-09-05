@@ -46,7 +46,10 @@ NANO_LUNA_BENCHMARK_CASES: tuple[BenchmarkCase, ...] = (
     ),
     BenchmarkCase(
         "strong_reasoning_boundary",
-        "Compara tres arquitecturas distribuidas con fallos parciales y justifica la mejor bajo restricciones contradictorias.",
+        (
+            "Compara tres arquitecturas distribuidas con fallos parciales y justifica la mejor "
+            "bajo restricciones contradictorias."
+        ),
         Complexity.HIGH,
         512,
         requires_stronger_reasoning=True,

@@ -97,7 +97,11 @@ def test_single_call_ceiling_prevents_second_provider_invocation(monkeypatch: An
 
         monkeypatch.setattr(runner, "get_settings", lambda: FakeSettings())
         monkeypatch.setattr(runner, "CandidateEvaluator", FakeEvaluator)
-        monkeypatch.setattr(runner, "OpenAIProvider", lambda _: cast(Any, SimpleNamespace()))
+        monkeypatch.setattr(
+            runner,
+            "OpenAIProvider",
+            lambda _: cast(Any, SimpleNamespace(key="openai")),
+        )
         result = await runner._run(case_key="greeting", model_id="gpt-5-nano", max_calls=1)
         assert result == 0
         assert calls == 1

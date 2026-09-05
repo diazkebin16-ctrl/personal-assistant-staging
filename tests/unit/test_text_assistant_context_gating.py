@@ -17,7 +17,9 @@ from backend.app.text_assistant.task_profile import (
 )
 
 
-def _message(index: int, *, sensitivity: DataSensitivity = DataSensitivity.INTERNAL) -> ConversationMessage:
+def _message(
+    index: int, *, sensitivity: DataSensitivity = DataSensitivity.INTERNAL
+) -> ConversationMessage:
     return ConversationMessage(
         id=uuid4(),
         conversation_id=uuid4(),
@@ -34,7 +36,9 @@ def _message(index: int, *, sensitivity: DataSensitivity = DataSensitivity.INTER
     )
 
 
-def _memory(index: int, sensitivity: DataSensitivity = DataSensitivity.PRIVATE) -> MemoryContextItem:
+def _memory(
+    index: int, sensitivity: DataSensitivity = DataSensitivity.PRIVATE
+) -> MemoryContextItem:
     return MemoryContextItem(
         id=uuid4(),
         memory_class=MemoryClass.PERSISTENT_PREFERENCE,

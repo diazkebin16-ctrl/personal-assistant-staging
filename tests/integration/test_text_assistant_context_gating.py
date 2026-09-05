@@ -84,7 +84,7 @@ def test_independent_chat_with_history_and_memory_permission_queries_no_memory()
                     del args, kwargs
                     raise AssertionError("independent chat must not query Memory")
 
-                service.memory.build_context_pack = fail_if_memory_queried  # type: ignore[method-assign]
+                service.memory.build_context_pack = fail_if_memory_queried  # type: ignore[assignment]
                 conversation = await service.create_conversation(
                     current, ConversationCreateRequest()
                 )
@@ -184,7 +184,7 @@ def test_memory_dependent_chat_queries_memory_only_when_authorized() -> None:
                     calls += 1
                     return SimpleNamespace(value=_memory_pack())
 
-                service.memory.build_context_pack = memory_context  # type: ignore[method-assign]
+                service.memory.build_context_pack = memory_context  # type: ignore[assignment]
 
                 unauthorized = await service.create_conversation(
                     current, ConversationCreateRequest()

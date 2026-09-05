@@ -146,9 +146,9 @@ def test_api_timeout_is_normalized_once_without_retry() -> None:
 
 def test_provider_does_not_log_prompt_or_key(caplog: pytest.LogCaptureFixture) -> None:
     async def scenario() -> None:
-        secret = "benchmark-secret-key"
+        credential = "benchmark-key-not-real"
         private_text = "sensitive-fixture-that-must-not-be-logged"
-        provider = OpenAIProvider(secret)
+        provider = OpenAIProvider(credential)
 
         class Responses:
             async def create(self, **_: Any) -> SimpleNamespace:
@@ -160,7 +160,7 @@ def test_provider_does_not_log_prompt_or_key(caplog: pytest.LogCaptureFixture) -
             ProviderRequest(input_text=private_text, output_token_budget=256),
         )
         rendered = caplog.text
-        assert secret not in rendered
+        assert credential not in rendered
         assert private_text not in rendered
 
     asyncio.run(scenario())

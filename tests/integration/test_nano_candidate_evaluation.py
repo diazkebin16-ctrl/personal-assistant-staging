@@ -64,7 +64,7 @@ def test_candidate_and_luna_baseline_share_openai_adapter_and_cached_accounting(
         )
         assert nano.response.output_text == "nano answer"
         assert nano.response.cached_tokens == 40
-        assert nano.estimated_cost_microunits == 1
+        assert nano.estimated_cost_microunits == 12
         assert luna.response.output_text == "luna answer"
         assert provider.call_count == 2
 

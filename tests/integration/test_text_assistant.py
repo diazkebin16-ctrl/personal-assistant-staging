@@ -224,7 +224,9 @@ def test_critical_memory_fails_closed_before_external_provider_invocation() -> N
                     current, ConversationCreateRequest()
                 )
                 result = await service.submit(
-                    current, conversation.id, message("hello", use_memory=True)
+                    current,
+                    conversation.id,
+                    message("¿Qué recuerdas de mí?", use_memory=True),
                 )
                 assert result.assistant_message.status.value == "FAILED"
                 assert result.assistant_message.sensitivity is DataSensitivity.CRITICAL
@@ -285,7 +287,9 @@ def test_sensitive_memory_routes_only_to_sensitivity_approved_provider() -> None
                     current, ConversationCreateRequest()
                 )
                 result = await service.submit(
-                    current, conversation.id, message("hello", use_memory=True)
+                    current,
+                    conversation.id,
+                    message("¿Qué recuerdas de mí?", use_memory=True),
                 )
                 assert result.assistant_message.outcome is AssistantOutcome.ANSWERED
                 assert providers["sensitive-approved"].call_count == 1

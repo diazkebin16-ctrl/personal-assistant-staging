@@ -64,7 +64,7 @@ from backend.app.text_assistant.schemas import (
     ConversationMessageResponse,
     ConversationResponse,
 )
-from backend.app.text_assistant.task_profile import profile_chat_task
+from backend.app.text_assistant.task_profile import MemoryDependency, profile_chat_task
 
 logger = logging.getLogger(__name__)
 
@@ -491,17 +491,41 @@ class TextAssistantService:
         history: list[ConversationMessage],
         current_sensitivity: DataSensitivity,
     ) -> _AssistantMaterial:
+        task_profile = profile_chat_task(
+            request.content,
+            requested_output_tokens=request.requested_output_tokens,
+        )
         pack = None
-        if request.use_memory_context:
+        memory_was_queried = False
+        if request.use_memory_context and task_profile.memory_dependency is MemoryDependency.NEEDED:
             memory_result = await self.memory.build_context_pack(
                 identity, per_category_limit=request.memory_items_per_category
             )
             pack = memory_result.value
-        context = build_context(history, pack, current_sensitivity)
+            memory_was_queried = True
+        context = build_context(
+            history,
+            pack,
+            current_sensitivity,
+            task_profile=task_profile,
+        )
         prompt = context.provider_input(request.content)
-        task_profile = profile_chat_task(
-            request.content,
-            requested_output_tokens=request.requested_output_tokens,
+        estimated_input_tokens = max(1, (len(prompt) + 3) // 4)
+        self.observer.emit(
+            TextAssistantMetricEvent(
+                name="text_assistant.context.selected",
+                attributes={
+                    "history_messages_available": len(history),
+                    "history_messages_included": len(context.history),
+                    "history_chars_included": sum(len(item.content) for item in context.history),
+                    "memory_context_authorized": request.use_memory_context,
+                    "memory_context_queried": memory_was_queried,
+                    "memory_items_included": len(context.memory_items),
+                    "context_dependency": task_profile.context_dependency.value,
+                    "memory_dependency": task_profile.memory_dependency.value,
+                    "estimated_input_tokens": estimated_input_tokens,
+                },
+            )
         )
         routing = RoutingRequest(
             task_type="text_assistant.conversation",
@@ -509,7 +533,7 @@ class TextAssistantService:
             required_capabilities=frozenset({ModelCapability.TEXT_GENERATION}),
             sensitivity=context.effective_sensitivity,
             context_sensitivities=tuple(item.sensitivity for item in context.memory_items),
-            estimated_input_tokens=max(1, (len(prompt) + 3) // 4),
+            estimated_input_tokens=estimated_input_tokens,
             requested_output_tokens=task_profile.output_token_budget,
         )
         try:

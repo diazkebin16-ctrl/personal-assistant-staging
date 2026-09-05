@@ -79,6 +79,8 @@ class ModelDefinition(BaseModel):
     model_id: CatalogKey
     model_class: ModelClass
     enabled: bool = False
+    routing_enabled: bool = True
+    evaluation_enabled: bool = False
     capabilities: frozenset[ModelCapability]
     context_limit: int = Field(ge=1, le=2_000_000)
     output_limit: int = Field(ge=1, le=131_072)
@@ -101,6 +103,8 @@ class ModelDefinition(BaseModel):
             ModelCapability.EMBEDDINGS not in self.capabilities
         ):
             raise ValueError("Embedding models must declare embedding capability")
+        if self.enabled and not self.routing_enabled and not self.evaluation_enabled:
+            raise ValueError("Enabled models must be routable or explicitly evaluation-enabled")
         return self
 
 

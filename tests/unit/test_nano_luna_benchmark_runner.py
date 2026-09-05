@@ -134,8 +134,8 @@ def test_context_rendering_remains_fixture_only() -> None:
 def test_evaluation_floor_and_selectors_are_preserved() -> None:
     greeting = next(case for case in NANO_LUNA_BENCHMARK_CASES if case.key == "greeting")
     assert greeting.output_token_budget == 128
-    assert MIN_EVALUATION_OUTPUT_TOKENS == 256
-    assert _evaluation_budget(greeting) == 256
+    assert MIN_EVALUATION_OUTPUT_TOKENS == 1024
+    assert _evaluation_budget(greeting) == 1024
     assert tuple(case.key for case in _selected_cases("greeting")) == ("greeting",)
     assert _selected_models("gpt-5-nano") == (("gpt-5-nano", False),)
 

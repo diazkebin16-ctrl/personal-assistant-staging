@@ -44,9 +44,7 @@ def _case(case_id: str) -> BenchmarkCase:
 
 def _model_ref() -> ModelReference:
     catalog = build_openai_staging_catalog()
-    model = next(
-        model for model in catalog.all_models if model.model_id == _FAKE_MODEL_ID
-    )
+    model = next(model for model in catalog.all_models if model.model_id == _FAKE_MODEL_ID)
     return ModelReference.from_definition(model)
 
 
@@ -154,9 +152,7 @@ async def _run_complete(result_dir: Path, run_id: str) -> int:
     store = BenchmarkResultStore(result_dir)
     try:
         document = store.create(run_id)
-        document, provider_calls = await _complete_fake_call(
-            store, document, _case("greeting")
-        )
+        document, provider_calls = await _complete_fake_call(store, document, _case("greeting"))
     except (BenchmarkStoreError, RuntimeError) as exc:
         print(
             json.dumps({"status": "failed", "reason": type(exc).__name__}),
@@ -186,9 +182,7 @@ async def _run_crash(result_dir: Path, run_id: str) -> int:
     store = BenchmarkResultStore(result_dir)
     try:
         document = store.create(run_id)
-        document, provider_calls = await _complete_fake_call(
-            store, document, _case("greeting")
-        )
+        document, provider_calls = await _complete_fake_call(store, document, _case("greeting"))
         document = store.checkpoint(document, _started(run_id, "simple_fact"))
     except (BenchmarkStoreError, RuntimeError) as exc:
         print(
@@ -226,9 +220,7 @@ def _run_resume(result_dir: Path, run_id: str) -> int:
         )
         return 2
     ambiguous = tuple(
-        call
-        for call in document.calls
-        if call.checkpoint_state is CheckpointState.IN_PROGRESS
+        call for call in document.calls if call.checkpoint_state is CheckpointState.IN_PROGRESS
     )
     if not ambiguous:
         print(

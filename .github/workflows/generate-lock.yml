@@ -2,14 +2,9 @@ name: Generate uv lock
 
 on:
   workflow_dispatch:
-  push:
-    branches:
-      - ai3/gemini-evaluation-candidate
-    paths:
-      - .github/workflows/generate-lock.yml
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   lock:
@@ -17,8 +12,6 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
-        with:
-          ref: ai3/gemini-evaluation-candidate
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -33,13 +26,8 @@ jobs:
       - name: Generate lockfile
         run: uv lock
 
-      - name: Commit lockfile when changed
-        run: |
-          if git diff --quiet -- uv.lock; then
-            exit 0
-          fi
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add uv.lock
-          git commit -m "Update uv lock for Gemini SDK"
-          git push origin HEAD:ai3/gemini-evaluation-candidate
+      - name: Upload lockfile
+        uses: actions/upload-artifact@v4
+        with:
+          name: uv-lock
+          path: uv.lock

@@ -11,7 +11,7 @@ from sqlalchemy.engine import CursorResult
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from backend.app.ai_router.enums import Complexity, ModelCapability
+from backend.app.ai_router.enums import ModelCapability
 from backend.app.ai_router.schemas import ProviderRequest, RoutingRequest
 from backend.app.ai_router.service import AIRouter
 from backend.app.core.errors import (
@@ -64,6 +64,7 @@ from backend.app.text_assistant.schemas import (
     ConversationMessageResponse,
     ConversationResponse,
 )
+from backend.app.text_assistant.task_profile import profile_chat_task
 
 logger = logging.getLogger(__name__)
 
@@ -447,7 +448,7 @@ class TextAssistantService:
         result = await self.memory.delete_owned(
             identity,
             target.memory_id,
-            expected_version=target.expected_version,
+            expected_version=expected_version,
             confirmation_id=target.confirmation_id,
         )
         if result.decision.decision is AuthorizationDecisionType.REQUIRE_CONFIRMATION:
@@ -498,15 +499,18 @@ class TextAssistantService:
             pack = memory_result.value
         context = build_context(history, pack, current_sensitivity)
         prompt = context.provider_input(request.content)
-        complexity = self._complexity(len(request.content), len(context.history))
+        task_profile = profile_chat_task(
+            request.content,
+            requested_output_tokens=request.requested_output_tokens,
+        )
         routing = RoutingRequest(
             task_type="text_assistant.conversation",
-            complexity=complexity,
+            complexity=task_profile.complexity,
             required_capabilities=frozenset({ModelCapability.TEXT_GENERATION}),
             sensitivity=context.effective_sensitivity,
             context_sensitivities=tuple(item.sensitivity for item in context.memory_items),
             estimated_input_tokens=max(1, (len(prompt) + 3) // 4),
-            requested_output_tokens=request.requested_output_tokens,
+            requested_output_tokens=task_profile.output_token_budget,
         )
         try:
             execution = await self.ai_router.invoke(
@@ -514,7 +518,7 @@ class TextAssistantService:
                 routing,
                 ProviderRequest(
                     input_text=prompt,
-                    output_token_budget=request.requested_output_tokens,
+                    output_token_budget=task_profile.output_token_budget,
                 ),
             )
         except AIRoutingDeniedError:
@@ -670,15 +674,6 @@ class TextAssistantService:
         if assistant is None:
             raise ConversationConcurrentModificationError
         return self._response(conversation, user_message, assistant)
-
-    @staticmethod
-    def _complexity(content_length: int, history_count: int) -> Complexity:
-        score = content_length + history_count * 250
-        if score < 200:
-            return Complexity.LOW
-        if score < 4000:
-            return Complexity.MEDIUM
-        return Complexity.HIGH
 
     @staticmethod
     def _failed(

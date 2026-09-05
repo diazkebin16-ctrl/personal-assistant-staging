@@ -142,7 +142,7 @@ class BenchmarkRunDocument(BaseModel):
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
-    schema_version: Literal[1] = BENCHMARK_SCHEMA_VERSION
+    schema_version: Literal[1] = 1
     benchmark_version: str = BENCHMARK_VERSION
     benchmark_run_id: str = Field(min_length=1, max_length=64)
     created_at: datetime

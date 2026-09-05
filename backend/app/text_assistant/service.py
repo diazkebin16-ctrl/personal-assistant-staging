@@ -448,7 +448,7 @@ class TextAssistantService:
         result = await self.memory.delete_owned(
             identity,
             target.memory_id,
-            expected_version=expected_version,
+            expected_version=target.expected_version,
             confirmation_id=target.confirmation_id,
         )
         if result.decision.decision is AuthorizationDecisionType.REQUIRE_CONFIRMATION:

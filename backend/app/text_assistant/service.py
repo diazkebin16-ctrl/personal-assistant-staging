@@ -497,10 +497,7 @@ class TextAssistantService:
         )
         pack = None
         memory_was_queried = False
-        if (
-            request.use_memory_context
-            and task_profile.memory_dependency is MemoryDependency.NEEDED
-        ):
+        if request.use_memory_context and task_profile.memory_dependency is MemoryDependency.NEEDED:
             memory_result = await self.memory.build_context_pack(
                 identity, per_category_limit=request.memory_items_per_category
             )

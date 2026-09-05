@@ -178,9 +178,7 @@ def test_memory_dependent_chat_queries_memory_only_when_authorized() -> None:
                 service.observer = observer
                 calls = 0
 
-                async def memory_context(
-                    *args: object, **kwargs: object
-                ) -> SimpleNamespace:
+                async def memory_context(*args: object, **kwargs: object) -> SimpleNamespace:
                     nonlocal calls
                     del args, kwargs
                     calls += 1

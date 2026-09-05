@@ -1,7 +1,11 @@
 """Offline safety checks for the real Nano/Luna benchmark runner."""
 
 from backend.app.ai_router.benchmark import NANO_LUNA_BENCHMARK_CASES
-from scripts.run_nano_luna_benchmark import _input_text
+from scripts.run_nano_luna_benchmark import (
+    MIN_EVALUATION_OUTPUT_TOKENS,
+    _evaluation_budget,
+    _input_text,
+)
 
 
 def test_benchmark_has_exactly_ten_small_synthetic_cases() -> None:
@@ -34,3 +38,14 @@ def test_high_case_is_explicit_negative_control() -> None:
         case for case in NANO_LUNA_BENCHMARK_CASES if case.key == "strong_reasoning_boundary"
     )
     assert high.requires_stronger_reasoning is True
+
+
+def test_evaluation_floor_is_separate_from_productive_fixture_budget() -> None:
+    greeting = next(case for case in NANO_LUNA_BENCHMARK_CASES if case.key == "greeting")
+    high = next(
+        case for case in NANO_LUNA_BENCHMARK_CASES if case.key == "strong_reasoning_boundary"
+    )
+    assert greeting.output_token_budget == 128
+    assert MIN_EVALUATION_OUTPUT_TOKENS == 256
+    assert _evaluation_budget(greeting) == 256
+    assert _evaluation_budget(high) == 512

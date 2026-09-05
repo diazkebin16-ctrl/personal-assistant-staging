@@ -1,8 +1,7 @@
-"""Run the authorized 20-call GPT-5 Nano versus GPT-5.6 Luna benchmark.
+"""Run the authorized GPT-5 Nano versus GPT-5.6 Luna benchmark.
 
-This runner is intentionally explicit, sequential, public-data-only, and retry-free.
-It exits immediately on the first provider failure so a technical error cannot trigger
-extra paid calls automatically.
+The runner is explicit, sequential, public-data-only, and retry-free. It exits after
+any non-completed provider outcome so a technical issue cannot spend additional calls.
 """
 
 from __future__ import annotations
@@ -13,6 +12,7 @@ from dataclasses import asdict, dataclass
 
 from backend.app.ai_router.benchmark import NANO_LUNA_BENCHMARK_CASES, BenchmarkCase
 from backend.app.ai_router.catalog import build_openai_staging_catalog
+from backend.app.ai_router.diagnostics import ProviderResponseStatus
 from backend.app.ai_router.enums import ModelCapability
 from backend.app.ai_router.evaluation import CandidateEvaluator
 from backend.app.ai_router.openai_provider import OpenAIProvider
@@ -21,18 +21,23 @@ from backend.app.ai_router.schemas import ModelReference, ProviderRequest, Routi
 from backend.app.core.config import get_settings
 from backend.app.security.classification import DataSensitivity
 
+MIN_EVALUATION_OUTPUT_TOKENS = 256
+
 
 @dataclass(frozen=True, slots=True)
 class BenchmarkResult:
     case: str
     model: str
-    success: bool
+    reported_model: str | None
+    status: str
     input_tokens: int
     cached_input_tokens: int
     output_tokens: int
+    reasoning_tokens: int
     latency_ms: int
     estimated_cost_microunits: int
-    output_text: str
+    output_text: str | None = None
+    incomplete_reason: str | None = None
 
 
 def _input_text(case: BenchmarkCase) -> str:
@@ -40,6 +45,11 @@ def _input_text(case: BenchmarkCase) -> str:
         return case.prompt
     context = "\n".join(f"- {item}" for item in case.prior_context)
     return f"Contexto permitido:\n{context}\n\nUsuario:\n{case.prompt}"
+
+
+def _evaluation_budget(case: BenchmarkCase) -> int:
+    """Use an evaluation-only floor without changing productive output policy."""
+    return max(MIN_EVALUATION_OUTPUT_TOKENS, case.output_token_budget)
 
 
 def _model_ref(model_id: str) -> ModelReference:
@@ -73,17 +83,18 @@ async def _run() -> int:
 
     for case in NANO_LUNA_BENCHMARK_CASES:
         input_text = _input_text(case)
+        output_budget = _evaluation_budget(case)
         routing_request = RoutingRequest(
             task_type="benchmark.nano_luna",
             complexity=case.complexity,
             required_capabilities=frozenset({ModelCapability.TEXT_GENERATION}),
             sensitivity=DataSensitivity.PUBLIC,
             estimated_input_tokens=max(1, len(input_text) // 3),
-            requested_output_tokens=case.output_token_budget,
+            requested_output_tokens=output_budget,
         )
         provider_request = ProviderRequest(
             input_text=input_text,
-            output_token_budget=case.output_token_budget,
+            output_token_budget=output_budget,
         )
 
         for model_id, baseline in (("gpt-5-nano", False), ("gpt-5.6-luna", True)):
@@ -117,21 +128,33 @@ async def _run() -> int:
                 return 2
 
             calls += 1
+            response = result.response
             row = BenchmarkResult(
                 case=case.key,
                 model=model_id,
-                success=True,
-                input_tokens=result.response.input_tokens,
-                cached_input_tokens=result.response.cached_tokens,
-                output_tokens=result.response.output_tokens,
+                reported_model=response.reported_model_id,
+                status=response.status.value,
+                input_tokens=response.input_tokens,
+                cached_input_tokens=response.cached_tokens,
+                output_tokens=response.output_tokens,
+                reasoning_tokens=response.reasoning_tokens,
                 latency_ms=result.latency_ms,
                 estimated_cost_microunits=result.estimated_cost_microunits,
-                output_text=result.response.output_text,
+                output_text=(
+                    response.output_text
+                    if response.status is ProviderResponseStatus.COMPLETED
+                    else None
+                ),
+                incomplete_reason=response.incomplete_reason,
             )
-            print(
-                "BENCHMARK_RESULT " + json.dumps(asdict(row), ensure_ascii=False),
-                flush=True,
+            prefix = (
+                "BENCHMARK_RESULT"
+                if response.status is ProviderResponseStatus.COMPLETED
+                else "BENCHMARK_DIAGNOSTIC"
             )
+            print(f"{prefix} " + json.dumps(asdict(row), ensure_ascii=False), flush=True)
+            if response.status is not ProviderResponseStatus.COMPLETED:
+                return 2
 
     print(json.dumps({"benchmark_complete": True, "calls": calls}), flush=True)
     return 0

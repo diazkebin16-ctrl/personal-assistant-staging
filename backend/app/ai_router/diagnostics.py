@@ -1,8 +1,11 @@
 """Provider-neutral diagnostic metadata for explicit model evaluation only."""
 
 from enum import StrEnum
+from typing import Protocol, runtime_checkable
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
+
+from backend.app.ai_router.schemas import ProviderRequest
 
 
 class ProviderResponseStatus(StrEnum):
@@ -40,3 +43,16 @@ class ProviderDiagnosticResponse(BaseModel):
         if self.status is ProviderResponseStatus.COMPLETED and not self.output_text:
             raise ValueError("Completed responses require visible output text")
         return self
+
+
+@runtime_checkable
+class EvaluationDiagnosticProvider(Protocol):
+    """Optional provider capability for preserving non-success evaluation metadata."""
+
+    key: str
+
+    async def generate_for_evaluation(
+        self,
+        model_id: str,
+        request: ProviderRequest,
+    ) -> ProviderDiagnosticResponse: ...

@@ -4,6 +4,11 @@ from dataclasses import dataclass
 from time import perf_counter
 
 from backend.app.ai_router.catalog import ModelCatalog
+from backend.app.ai_router.diagnostics import (
+    EvaluationDiagnosticProvider,
+    ProviderDiagnosticResponse,
+    ProviderResponseStatus,
+)
 from backend.app.ai_router.enums import FailureCategory
 from backend.app.ai_router.policy import SensitivityRoutingPolicy
 from backend.app.ai_router.provider import ProviderFailure, ProviderRegistry
@@ -11,7 +16,6 @@ from backend.app.ai_router.schemas import (
     ModelDefinition,
     ModelReference,
     ProviderRequest,
-    ProviderResponse,
     RoutingRequest,
 )
 from backend.app.core.errors import AIRoutingDeniedError
@@ -22,7 +26,7 @@ class CandidateEvaluationResult:
     """Ephemeral evaluation evidence; it contains no credentials or raw request logging."""
 
     model: ModelReference
-    response: ProviderResponse
+    response: ProviderDiagnosticResponse
     latency_ms: int
     estimated_cost_microunits: int
 
@@ -97,7 +101,8 @@ class CandidateEvaluator:
                 succeeded=False,
                 failure_category=exc.category,
             )
-        return CandidateEvaluationAttempt(model=model_ref, succeeded=True, result=result)
+        succeeded = result.response.status is ProviderResponseStatus.COMPLETED
+        return CandidateEvaluationAttempt(model=model_ref, succeeded=succeeded, result=result)
 
     async def _evaluate(
         self,
@@ -141,10 +146,27 @@ class CandidateEvaluator:
 
         provider = self.providers.get(model.provider_key)
         started = perf_counter()
-        response = await provider.generate(model.model_id, provider_request)
+        if isinstance(provider, EvaluationDiagnosticProvider):
+            response = await provider.generate_for_evaluation(model.model_id, provider_request)
+        else:
+            normal = await provider.generate(model.model_id, provider_request)
+            response = ProviderDiagnosticResponse(
+                status=(
+                    ProviderResponseStatus.COMPLETED
+                    if normal.output_text
+                    else ProviderResponseStatus.MALFORMED
+                ),
+                output_text=normal.output_text,
+                input_tokens=normal.input_tokens,
+                output_tokens=normal.output_tokens,
+                cached_tokens=normal.cached_tokens,
+                actual_cost_microunits=normal.actual_cost_microunits,
+                reported_model_id=model.model_id,
+            )
         latency_ms = max(0, round((perf_counter() - started) * 1000))
+
         if response.output_tokens > provider_request.output_token_budget:
-            raise ProviderFailure(FailureCategory.MALFORMED_RESPONSE)
+            response = response.model_copy(update={"status": ProviderResponseStatus.MALFORMED})
 
         estimated_cost = model.pricing.estimate_microunits(
             response.input_tokens,

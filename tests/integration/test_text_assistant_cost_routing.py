@@ -42,7 +42,9 @@ async def _latest_decision(session: AsyncSession) -> RoutingDecisionRecord:
     return decision
 
 
-@pytest.mark.parametrize("prior_turns", [0, 1, 6], ids=["no-history", "two-messages", "twelve-messages"])
+@pytest.mark.parametrize(
+    "prior_turns", [0, 1, 6], ids=["no-history", "two-messages", "twelve-messages"]
+)
 def test_simple_question_stays_fast_regardless_of_history_size(prior_turns: int) -> None:
     async def scenario() -> None:
         async with isolated_database() as database:

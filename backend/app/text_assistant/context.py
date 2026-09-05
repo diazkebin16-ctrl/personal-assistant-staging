@@ -10,6 +10,11 @@ from backend.app.text_assistant.instructions import (
     SYSTEM_INSTRUCTIONS,
 )
 from backend.app.text_assistant.models import ConversationMessage
+from backend.app.text_assistant.task_profile import (
+    ChatTaskProfile,
+    ContextDependency,
+    MemoryDependency,
+)
 
 MAX_CONTEXT_MESSAGES = 12
 MAX_HISTORY_CHARACTERS = 20_000
@@ -61,11 +66,15 @@ def memory_items(pack: MemoryContextPack | None) -> tuple[MemoryContextItem, ...
     )
 
 
-def bounded_history(messages: list[ConversationMessage]) -> tuple[ConversationMessage, ...]:
+def bounded_history(
+    messages: list[ConversationMessage], *, max_messages: int = MAX_CONTEXT_MESSAGES
+) -> tuple[ConversationMessage, ...]:
     """Keep complete recent messages; never silently cut one message in half."""
+    if max_messages <= 0:
+        return ()
     selected: list[ConversationMessage] = []
     used = 0
-    for message in reversed(messages[-MAX_CONTEXT_MESSAGES:]):
+    for message in reversed(messages[-min(max_messages, MAX_CONTEXT_MESSAGES) :]):
         size = len(message.content)
         if used + size > MAX_HISTORY_CHARACTERS:
             break
@@ -74,13 +83,37 @@ def bounded_history(messages: list[ConversationMessage]) -> tuple[ConversationMe
     return tuple(reversed(selected))
 
 
+def select_history(
+    messages: list[ConversationMessage], profile: ChatTaskProfile | None
+) -> tuple[ConversationMessage, ...]:
+    """Release only the conversation window required by the current request."""
+    if profile is None:
+        return bounded_history(messages)
+    if profile.context_dependency is ContextDependency.INDEPENDENT:
+        return ()
+    return bounded_history(messages, max_messages=profile.history_message_limit)
+
+
+def select_memory_items(
+    pack: MemoryContextPack | None, profile: ChatTaskProfile | None
+) -> tuple[MemoryContextItem, ...]:
+    """Release Memory only when the current request has a Memory dependency."""
+    if pack is None:
+        return ()
+    if profile is not None and profile.memory_dependency is MemoryDependency.NOT_NEEDED:
+        return ()
+    return memory_items(pack)
+
+
 def build_context(
     history: list[ConversationMessage],
     pack: MemoryContextPack | None,
     current_sensitivity: DataSensitivity,
+    *,
+    task_profile: ChatTaskProfile | None = None,
 ) -> ConversationContextPack:
-    bounded = bounded_history(history)
-    items = memory_items(pack)
+    bounded = select_history(history, task_profile)
+    items = select_memory_items(pack, task_profile)
     sensitivities = [DataSensitivity.INTERNAL, current_sensitivity]
     sensitivities.extend(message.sensitivity for message in bounded)
     sensitivities.extend(item.sensitivity for item in items)

@@ -1,10 +1,18 @@
 """Offline safety checks for the real Nano/Luna benchmark runner."""
 
+import asyncio
+from types import SimpleNamespace
+from typing import Any, cast
+
 from backend.app.ai_router.benchmark import NANO_LUNA_BENCHMARK_CASES
+from backend.app.ai_router.diagnostics import ProviderResponseStatus
+from scripts import run_nano_luna_benchmark as runner
 from scripts.run_nano_luna_benchmark import (
     MIN_EVALUATION_OUTPUT_TOKENS,
     _evaluation_budget,
     _input_text,
+    _selected_cases,
+    _selected_models,
 )
 
 
@@ -49,3 +57,49 @@ def test_evaluation_floor_is_separate_from_productive_fixture_budget() -> None:
     assert MIN_EVALUATION_OUTPUT_TOKENS == 256
     assert _evaluation_budget(greeting) == 256
     assert _evaluation_budget(high) == 512
+
+
+def test_selectors_can_isolate_exactly_greeting_and_nano() -> None:
+    cases = _selected_cases("greeting")
+    models = _selected_models("gpt-5-nano")
+    assert tuple(case.key for case in cases) == ("greeting",)
+    assert models == (("gpt-5-nano", False),)
+
+
+def test_single_call_ceiling_prevents_second_provider_invocation(monkeypatch: Any) -> None:
+    async def scenario() -> None:
+        calls = 0
+
+        class FakeEvaluator:
+            def __init__(self, *_: Any, **__: Any) -> None:
+                pass
+
+            async def evaluate(self, *_: Any, **__: Any) -> Any:
+                nonlocal calls
+                calls += 1
+                return SimpleNamespace(
+                    latency_ms=1,
+                    estimated_cost_microunits=1,
+                    response=SimpleNamespace(
+                        reported_model_id="gpt-5-nano",
+                        status=ProviderResponseStatus.COMPLETED,
+                        input_tokens=1,
+                        cached_tokens=0,
+                        output_tokens=1,
+                        reasoning_tokens=0,
+                        output_text="Hola",
+                        incomplete_reason=None,
+                    ),
+                )
+
+        class FakeSettings:
+            openai_api_key = SimpleNamespace(get_secret_value=lambda: "fixture-key")
+
+        monkeypatch.setattr(runner, "get_settings", lambda: FakeSettings())
+        monkeypatch.setattr(runner, "CandidateEvaluator", FakeEvaluator)
+        monkeypatch.setattr(runner, "OpenAIProvider", lambda _: cast(Any, SimpleNamespace()))
+        result = await runner._run(case_key="greeting", model_id="gpt-5-nano", max_calls=1)
+        assert result == 0
+        assert calls == 1
+
+    asyncio.run(scenario())

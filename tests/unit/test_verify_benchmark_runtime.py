@@ -49,7 +49,9 @@ def test_crash_persists_finished_and_in_progress_records(tmp_path: Path) -> None
     assert document.calls[1].case_id == "simple_fact"
 
 
-def test_resume_refuses_ambiguous_checkpoint_without_provider_call(tmp_path: Path) -> None:
+def test_resume_refuses_ambiguous_checkpoint_without_provider_call(
+    tmp_path: Path,
+) -> None:
     assert asyncio.run(verifier._run_crash(tmp_path, "runtime-resume")) == 0
     before = (tmp_path / "runtime-resume" / "result.json").read_bytes()
     assert verifier._run_resume(tmp_path, "runtime-resume") == 0

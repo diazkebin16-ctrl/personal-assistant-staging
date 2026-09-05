@@ -44,7 +44,9 @@ def _case(case_id: str) -> BenchmarkCase:
 
 def _model_ref() -> ModelReference:
     catalog = build_openai_staging_catalog()
-    model = next(model for model in catalog.all_models if model.model_id == _FAKE_MODEL_ID)
+    model = next(
+        model for model in catalog.all_models if model.model_id == _FAKE_MODEL_ID
+    )
     return ModelReference.from_definition(model)
 
 

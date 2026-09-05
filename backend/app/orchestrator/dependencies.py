@@ -4,7 +4,7 @@ from typing import Annotated
 
 from fastapi import Depends
 
-from backend.app.ai_router.catalog import DEFAULT_MODEL_CATALOG
+from backend.app.ai_router.composition import build_configured_ai_components
 from backend.app.ai_router.policy import AIRoutingPolicy
 from backend.app.ai_router.service import AIRouter
 from backend.app.core.config import Settings, get_settings
@@ -29,10 +29,12 @@ def get_orchestrator_service(
     audit: AuditEngineDependency,
     settings: Annotated[Settings, Depends(get_settings)],
 ) -> OrchestratorService:
+    catalog, providers = build_configured_ai_components(settings)
     router = AIRouter(
         session,
-        DEFAULT_MODEL_CATALOG,
-        AIRoutingPolicy(DEFAULT_MODEL_CATALOG),
+        catalog,
+        AIRoutingPolicy(catalog),
+        providers=providers,
     )
     policy = OrchestratorPolicy(
         safe_mode=SafeMode(settings.orchestrator_mode),

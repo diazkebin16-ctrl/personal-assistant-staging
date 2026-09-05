@@ -57,7 +57,18 @@ class ModelCatalog:
 
     @property
     def models(self) -> tuple[ModelDefinition, ...]:
+        """Models eligible to participate in normal routing policy evaluation."""
+        return tuple(model for model in self._models.values() if model.routing_enabled)
+
+    @property
+    def all_models(self) -> tuple[ModelDefinition, ...]:
+        """All server-owned definitions, including explicit evaluation-only candidates."""
         return tuple(self._models.values())
+
+    @property
+    def evaluation_models(self) -> tuple[ModelDefinition, ...]:
+        """Models explicitly available to the internal evaluation path."""
+        return tuple(model for model in self._models.values() if model.evaluation_enabled)
 
     def provider(self, provider_key: str) -> ProviderDefinition:
         try:
@@ -231,6 +242,15 @@ _OPENAI_SOL_PRICING = PricingMetadata(
     effective_date=date(2026, 9, 3),
 )
 
+# Source: https://ai.google.dev/gemini-api/docs/pricing, verified 2026-09-04.
+_GEMINI_FLASH_LITE_PRICING = PricingMetadata(
+    currency="USD",
+    input_microunits_per_million_tokens=100_000,
+    output_microunits_per_million_tokens=400_000,
+    pricing_version="google-gemini-2026-09-04",
+    effective_date=date(2026, 9, 4),
+)
+
 
 def build_openai_staging_catalog() -> ModelCatalog:
     """OpenAI staging catalog with complexity-aware quality routing."""
@@ -296,6 +316,41 @@ def build_openai_staging_catalog() -> ModelCatalog:
     )
 
     return ModelCatalog(providers, models)
+
+
+def build_staging_catalog(*, openai_enabled: bool, gemini_enabled: bool) -> ModelCatalog:
+    """Compose independently configured providers while keeping Gemini evaluation-only."""
+    openai = build_openai_staging_catalog()
+    openai_provider = openai.provider("openai").model_copy(update={"enabled": openai_enabled})
+    openai_models = tuple(
+        model.model_copy(update={"enabled": openai_enabled}) for model in openai.all_models
+    )
+
+    gemini_provider = ProviderDefinition(
+        key="gemini",
+        enabled=gemini_enabled,
+        max_sensitivity=DataSensitivity.PUBLIC,
+    )
+    gemini_model = ModelDefinition(
+        provider_key="gemini",
+        model_id="gemini-2.5-flash-lite",
+        model_class=ModelClass.FAST,
+        enabled=gemini_enabled,
+        routing_enabled=False,
+        evaluation_enabled=True,
+        capabilities=frozenset({ModelCapability.TEXT_GENERATION}),
+        context_limit=1_048_576,
+        output_limit=65_536,
+        max_sensitivity=DataSensitivity.PUBLIC,
+        quality_tier=QualityTier.FAST,
+        latency_tier=LatencyTier.LOW,
+        pricing=_GEMINI_FLASH_LITE_PRICING,
+        fallback_priority=100,
+    )
+    return ModelCatalog(
+        (openai_provider, gemini_provider),
+        (*openai_models, gemini_model),
+    )
 
 
 OPENAI_STAGING_CATALOG = build_openai_staging_catalog()

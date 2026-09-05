@@ -27,7 +27,7 @@ from backend.app.ai_router.schemas import ModelReference, ProviderRequest, Routi
 from backend.app.core.config import get_settings
 from backend.app.security.classification import DataSensitivity
 
-MIN_EVALUATION_OUTPUT_TOKENS = 256
+MIN_EVALUATION_OUTPUT_TOKENS = 1024
 _ALLOWED_MODELS = ("gpt-5-nano", "gpt-5.6-luna")
 
 

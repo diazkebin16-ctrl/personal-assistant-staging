@@ -133,7 +133,9 @@ class CandidateEvaluator:
             raise AIRoutingDeniedError
         if routing_request.requested_output_tokens > model.output_limit:
             raise AIRoutingDeniedError
-        total_tokens = routing_request.estimated_input_tokens + routing_request.requested_output_tokens
+        total_tokens = (
+            routing_request.estimated_input_tokens + routing_request.requested_output_tokens
+        )
         if total_tokens > model.context_limit:
             raise AIRoutingDeniedError
 

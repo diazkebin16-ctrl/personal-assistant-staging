@@ -1,6 +1,13 @@
 """Task complexity and response-budget regressions for conversational routing."""
 
+from uuid import uuid4
+
+import pytest
+
+from backend.app.ai_router.catalog import build_staging_catalog
 from backend.app.ai_router.enums import Complexity
+from backend.app.ai_router.policy import AIRoutingPolicy
+from backend.app.ai_router.schemas import RoutingRequest
 from backend.app.text_assistant.task_profile import ContextDependency, profile_chat_task
 
 
@@ -69,3 +76,30 @@ def test_server_never_increases_requested_output_ceiling() -> None:
         requested_output_tokens=600,
     )
     assert profile.output_token_budget == 600
+
+
+@pytest.mark.parametrize(
+    ("complexity", "expected_model"),
+    [
+        (Complexity.LOW, "gpt-5.6-luna"),
+        (Complexity.MEDIUM, "gpt-5.6-terra"),
+        (Complexity.HIGH, "gpt-5.6-sol"),
+    ],
+)
+def test_openai_complexity_tiers_remain_available(
+    complexity: Complexity,
+    expected_model: str,
+) -> None:
+    catalog = build_staging_catalog(openai_enabled=True, gemini_enabled=True)
+    decision = AIRoutingPolicy(catalog).decide(
+        uuid4(),
+        RoutingRequest(
+            task_type="text_assistant.conversation",
+            complexity=complexity,
+            estimated_input_tokens=100,
+            requested_output_tokens=384,
+        ),
+    )
+    assert decision.selected_model is not None
+    assert decision.selected_model.model_id == expected_model
+    assert all(item.provider_key != "gemini" for item in decision.fallback_chain)

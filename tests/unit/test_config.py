@@ -30,3 +30,14 @@ def test_supabase_url_derives_strict_issuer_and_jwks_endpoint() -> None:
 def test_invalid_jwks_cache_ttl_is_rejected() -> None:
     with pytest.raises(ValidationError):
         Settings.model_validate({"AUTH_JWKS_CACHE_TTL": 30})
+
+
+def test_gemini_api_key_is_optional_secret_and_blank_is_unconfigured() -> None:
+    marker = "gemini-key-marker-not-for-repr"
+    configured = Settings.model_validate({"GEMINI_API_KEY": marker})
+    blank = Settings.model_validate({"GEMINI_API_KEY": "   "})
+
+    assert configured.gemini_api_key is not None
+    assert configured.gemini_api_key.get_secret_value() == marker
+    assert marker not in repr(configured)
+    assert blank.gemini_api_key is None

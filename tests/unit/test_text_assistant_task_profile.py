@@ -8,6 +8,7 @@ from backend.app.ai_router.catalog import build_staging_catalog
 from backend.app.ai_router.enums import Complexity
 from backend.app.ai_router.policy import AIRoutingPolicy
 from backend.app.ai_router.schemas import RoutingRequest
+from backend.app.security.classification import DataSensitivity
 from backend.app.text_assistant.task_profile import ContextDependency, profile_chat_task
 
 
@@ -96,6 +97,7 @@ def test_openai_complexity_tiers_remain_available(
         RoutingRequest(
             task_type="text_assistant.conversation",
             complexity=complexity,
+            sensitivity=DataSensitivity.PUBLIC,
             estimated_input_tokens=100,
             requested_output_tokens=384,
         ),

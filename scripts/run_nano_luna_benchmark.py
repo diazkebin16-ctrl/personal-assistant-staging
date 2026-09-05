@@ -6,6 +6,7 @@ any non-completed provider outcome so a technical issue cannot spend additional 
 
 from __future__ import annotations
 
+import argparse
 import asyncio
 import json
 from dataclasses import asdict, dataclass
@@ -22,6 +23,7 @@ from backend.app.core.config import get_settings
 from backend.app.security.classification import DataSensitivity
 
 MIN_EVALUATION_OUTPUT_TOKENS = 256
+_ALLOWED_MODELS = ("gpt-5-nano", "gpt-5.6-luna")
 
 
 @dataclass(frozen=True, slots=True)
@@ -58,7 +60,48 @@ def _model_ref(model_id: str) -> ModelReference:
     return ModelReference.from_definition(model)
 
 
-async def _run() -> int:
+def _selected_cases(case_key: str | None) -> tuple[BenchmarkCase, ...]:
+    if case_key is None:
+        return NANO_LUNA_BENCHMARK_CASES
+    selected = tuple(case for case in NANO_LUNA_BENCHMARK_CASES if case.key == case_key)
+    if len(selected) != 1:
+        raise ValueError(f"Unknown benchmark case: {case_key}")
+    return selected
+
+
+def _selected_models(model_id: str | None) -> tuple[tuple[str, bool], ...]:
+    if model_id is None:
+        return (("gpt-5-nano", False), ("gpt-5.6-luna", True))
+    if model_id not in _ALLOWED_MODELS:
+        raise ValueError(f"Unsupported benchmark model: {model_id}")
+    return ((model_id, model_id == "gpt-5.6-luna"),)
+
+
+def _parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--case", dest="case_key")
+    parser.add_argument("--model", choices=_ALLOWED_MODELS)
+    parser.add_argument("--max-calls", type=int, default=20)
+    return parser.parse_args()
+
+
+async def _run(
+    *,
+    case_key: str | None = None,
+    model_id: str | None = None,
+    max_calls: int = 20,
+) -> int:
+    if max_calls < 1 or max_calls > 20:
+        print("BENCHMARK_ABORT max_calls must be between 1 and 20", flush=True)
+        return 2
+
+    try:
+        selected_cases = _selected_cases(case_key)
+        selected_models = _selected_models(model_id)
+    except ValueError as exc:
+        print(f"BENCHMARK_ABORT {exc}", flush=True)
+        return 2
+
     settings = get_settings()
     if settings.openai_api_key is None:
         print("BENCHMARK_ABORT missing OPENAI_API_KEY", flush=True)
@@ -81,7 +124,7 @@ async def _run() -> int:
     evaluator = CandidateEvaluator(catalog, ProviderRegistry((provider,)))
     calls = 0
 
-    for case in NANO_LUNA_BENCHMARK_CASES:
+    for case in selected_cases:
         input_text = _input_text(case)
         output_budget = _evaluation_budget(case)
         routing_request = RoutingRequest(
@@ -97,18 +140,18 @@ async def _run() -> int:
             output_token_budget=output_budget,
         )
 
-        for model_id, baseline in (("gpt-5-nano", False), ("gpt-5.6-luna", True)):
-            if calls >= 20:
+        for selected_model_id, baseline in selected_models:
+            if calls >= max_calls:
                 print("BENCHMARK_ABORT call ceiling reached", flush=True)
                 return 2
             try:
                 if baseline:
                     result = await evaluator.evaluate_routing_baseline(
-                        _model_ref(model_id), routing_request, provider_request
+                        _model_ref(selected_model_id), routing_request, provider_request
                     )
                 else:
                     result = await evaluator.evaluate(
-                        _model_ref(model_id), routing_request, provider_request
+                        _model_ref(selected_model_id), routing_request, provider_request
                     )
             except ProviderFailure as exc:
                 calls += 1
@@ -117,7 +160,7 @@ async def _run() -> int:
                     + json.dumps(
                         {
                             "case": case.key,
-                            "model": model_id,
+                            "model": selected_model_id,
                             "failure_category": exc.category.value,
                             "calls_attempted": calls,
                         },
@@ -131,7 +174,7 @@ async def _run() -> int:
             response = result.response
             row = BenchmarkResult(
                 case=case.key,
-                model=model_id,
+                model=selected_model_id,
                 reported_model=response.reported_model_id,
                 status=response.status.value,
                 input_tokens=response.input_tokens,
@@ -161,7 +204,16 @@ async def _run() -> int:
 
 
 def main() -> None:
-    raise SystemExit(asyncio.run(_run()))
+    args = _parse_args()
+    raise SystemExit(
+        asyncio.run(
+            _run(
+                case_key=args.case_key,
+                model_id=args.model,
+                max_calls=args.max_calls,
+            )
+        )
+    )
 
 
 if __name__ == "__main__":

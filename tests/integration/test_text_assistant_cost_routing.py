@@ -64,7 +64,7 @@ def test_simple_question_stays_fast_regardless_of_history_size(prior_turns: int)
                         conversation.id,
                         _message(
                             "Mensaje previo irrelevante.",
-                            key=f"prior-{index}",
+                            key=f"prior-key-{index}",
                             version=index + 1,
                         ),
                     )
@@ -115,7 +115,11 @@ def test_context_dependent_simple_task_keeps_history_without_complexity_escalati
                 await service.submit(
                     current,
                     with_history.id,
-                    _message("La referencia necesaria es API REST.", key="context", version=1),
+                    _message(
+                        "La referencia necesaria es API REST.",
+                        key="context-key",
+                        version=1,
+                    ),
                 )
                 await service.submit(
                     current,

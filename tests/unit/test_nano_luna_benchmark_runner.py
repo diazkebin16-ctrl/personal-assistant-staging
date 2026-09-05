@@ -208,13 +208,16 @@ def test_checkpoint_after_each_call_and_two_calls_do_not_mix(
     tmp_path: Path, monkeypatch: Any
 ) -> None:
     evaluator = SequenceEvaluator([_result(), _result()])
-    assert _run(
-        tmp_path,
-        monkeypatch,
-        evaluator,
-        model_id=None,
-        max_calls=2,
-    ) == 0
+    assert (
+        _run(
+            tmp_path,
+            monkeypatch,
+            evaluator,
+            model_id=None,
+            max_calls=2,
+        )
+        == 0
+    )
     document = BenchmarkResultStore(tmp_path).load("run-a")
     assert len(document.calls) == 2
     assert document.aggregates.attempted_calls == 2
@@ -253,9 +256,7 @@ def test_resume_never_repeats_finished_call(tmp_path: Path, monkeypatch: Any) ->
     assert second.calls == 0
 
 
-def test_resume_refuses_ambiguous_in_progress_checkpoint(
-    tmp_path: Path, monkeypatch: Any
-) -> None:
+def test_resume_refuses_ambiguous_in_progress_checkpoint(tmp_path: Path, monkeypatch: Any) -> None:
     store = BenchmarkResultStore(tmp_path)
     document = store.create("run-a")
     document = store.checkpoint(
@@ -278,15 +279,18 @@ def test_max_calls_is_absolute_across_resume(tmp_path: Path, monkeypatch: Any) -
     first = SequenceEvaluator([_result()])
     assert _run(tmp_path, monkeypatch, first, max_calls=1) == 0
     second = SequenceEvaluator([])
-    assert _run(
-        tmp_path,
-        monkeypatch,
-        second,
-        case_key=None,
-        model_id="gpt-5-nano",
-        max_calls=1,
-        resume=True,
-    ) == 2
+    assert (
+        _run(
+            tmp_path,
+            monkeypatch,
+            second,
+            case_key=None,
+            model_id="gpt-5-nano",
+            max_calls=1,
+            resume=True,
+        )
+        == 2
+    )
     assert second.calls == 0
 
 
@@ -311,9 +315,7 @@ def test_corrupt_checkpoint_fails_closed(tmp_path: Path) -> None:
 def test_stray_partial_temp_file_does_not_replace_valid_checkpoint(tmp_path: Path) -> None:
     store = BenchmarkResultStore(tmp_path)
     original = store.create("run-a")
-    (tmp_path / "run-a" / ".result.json.partial.tmp").write_text(
-        "garbage", encoding="utf-8"
-    )
+    (tmp_path / "run-a" / ".result.json.partial.tmp").write_text("garbage", encoding="utf-8")
     loaded = store.load("run-a")
     assert loaded == original
 

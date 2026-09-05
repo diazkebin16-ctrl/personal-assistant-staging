@@ -65,8 +65,7 @@ class CandidateEvaluator:
                 and not routing_request.structured_output_required
             )
             or (
-                provider_request.tool_calling_required
-                and not routing_request.tool_calling_required
+                provider_request.tool_calling_required and not routing_request.tool_calling_required
             )
         ):
             raise AIRoutingDeniedError

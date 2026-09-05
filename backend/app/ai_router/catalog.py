@@ -338,7 +338,9 @@ def build_staging_catalog(*, openai_enabled: bool) -> ModelCatalog:
     """Compose the single-provider OpenAI staging catalog."""
     openai = build_openai_staging_catalog()
     provider = openai.provider("openai").model_copy(update={"enabled": openai_enabled})
-    models = tuple(model.model_copy(update={"enabled": openai_enabled}) for model in openai.all_models)
+    models = tuple(
+        model.model_copy(update={"enabled": openai_enabled}) for model in openai.all_models
+    )
     return ModelCatalog((provider,), models)
 
 

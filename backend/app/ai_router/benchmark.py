@@ -20,7 +20,9 @@ NANO_LUNA_BENCHMARK_CASES: tuple[BenchmarkCase, ...] = (
     BenchmarkCase("simple_fact", "¿Cuál es la capital de Francia?", Complexity.LOW, 128),
     BenchmarkCase("short_explanation", "Explica brevemente qué es una API.", Complexity.LOW, 256),
     BenchmarkCase("rewrite", "Reformula: El envío llegó tarde pero completo.", Complexity.LOW, 256),
-    BenchmarkCase("intent", "Clasifica la intención: recuérdame llamar a Ana mañana.", Complexity.LOW, 128),
+    BenchmarkCase(
+        "intent", "Clasifica la intención: recuérdame llamar a Ana mañana.", Complexity.LOW, 128
+    ),
     BenchmarkCase("extract", "Extrae nombre y ciudad: Marta vive en Boston.", Complexity.LOW, 128),
     BenchmarkCase(
         "short_summary",

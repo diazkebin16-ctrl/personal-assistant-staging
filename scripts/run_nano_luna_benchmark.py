@@ -9,7 +9,6 @@ from __future__ import annotations
 
 import asyncio
 import json
-import sys
 from dataclasses import asdict, dataclass
 
 from backend.app.ai_router.benchmark import NANO_LUNA_BENCHMARK_CASES, BenchmarkCase

@@ -5,8 +5,6 @@ on:
   push:
     branches:
       - ai3/gemini-evaluation-candidate
-    paths:
-      - pyproject.toml
 
 permissions:
   contents: read

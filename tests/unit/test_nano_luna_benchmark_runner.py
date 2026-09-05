@@ -2,6 +2,7 @@
 
 import asyncio
 import json
+from datetime import UTC, datetime
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Any, cast
@@ -266,7 +267,7 @@ def test_resume_refuses_ambiguous_in_progress_checkpoint(tmp_path: Path, monkeyp
             case_id="greeting",
             requested_model="gpt-5-nano",
             checkpoint_state=CheckpointState.IN_PROGRESS,
-            timestamp="2026-09-05T11:00:00Z",
+            timestamp=datetime(2026, 9, 5, 11, 0, tzinfo=UTC),
         ),
     )
     assert document.aggregates.attempted_calls == 1

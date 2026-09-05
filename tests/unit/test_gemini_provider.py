@@ -4,6 +4,7 @@ import asyncio
 from types import SimpleNamespace
 
 import pytest
+from google.genai import types
 
 from backend.app.ai_router.enums import FailureCategory
 from backend.app.ai_router.gemini_provider import GeminiProvider
@@ -52,7 +53,8 @@ def test_gemini_provider_maps_text_usage_and_output_budget() -> None:
     assert result.actual_cost_microunits is None
     assert models.kwargs["model"] == "gemini-2.5-flash-lite"
     config = models.kwargs["config"]
-    assert getattr(config, "max_output_tokens") == 8
+    assert isinstance(config, types.GenerateContentConfig)
+    assert config.max_output_tokens == 8
 
 
 def test_gemini_provider_rejects_unimplemented_capabilities() -> None:
@@ -78,21 +80,21 @@ def test_gemini_provider_rejects_unimplemented_capabilities() -> None:
 
 
 def test_gemini_provider_normalizes_timeout_without_leaking_content() -> None:
-    secret_marker = "prompt-marker-never-log"
+    content_marker = "prompt-marker-never-log"
     api_key = "key-marker-never-log"
     provider = GeminiProvider(
         api_key,
-        client=_FakeClient(_FakeModels(error=TimeoutError(secret_marker))),
+        client=_FakeClient(_FakeModels(error=TimeoutError(content_marker))),
     )
-    request = ProviderRequest(input_text=secret_marker, output_token_budget=8)
+    request = ProviderRequest(input_text=content_marker, output_token_budget=8)
 
     with pytest.raises(ProviderFailure) as failure:
         asyncio.run(provider.generate("gemini-2.5-flash-lite", request))
 
     assert failure.value.category is FailureCategory.TIMEOUT
-    assert secret_marker not in str(failure.value)
+    assert content_marker not in str(failure.value)
     assert api_key not in str(failure.value)
-    assert secret_marker not in repr(request)
+    assert content_marker not in repr(request)
     assert api_key not in repr(provider)
 
 

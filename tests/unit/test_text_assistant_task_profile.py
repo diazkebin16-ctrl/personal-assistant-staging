@@ -91,7 +91,7 @@ def test_openai_complexity_tiers_remain_available(
     complexity: Complexity,
     expected_model: str,
 ) -> None:
-    catalog = build_staging_catalog(openai_enabled=True, gemini_enabled=True)
+    catalog = build_staging_catalog(openai_enabled=True)
     decision = AIRoutingPolicy(catalog).decide(
         uuid4(),
         RoutingRequest(
@@ -104,4 +104,4 @@ def test_openai_complexity_tiers_remain_available(
     )
     assert decision.selected_model is not None
     assert decision.selected_model.model_id == expected_model
-    assert all(item.provider_key != "gemini" for item in decision.fallback_chain)
+    assert all(item.model_id != "gpt-5-nano" for item in decision.fallback_chain)

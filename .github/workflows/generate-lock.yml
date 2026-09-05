@@ -2,9 +2,6 @@ name: Generate uv lock
 
 on:
   workflow_dispatch:
-  push:
-    branches:
-      - ai3/gemini-evaluation-candidate
 
 permissions:
   contents: read

@@ -37,15 +37,33 @@ class PricingMetadata(BaseModel):
 
     currency: Annotated[str, StringConstraints(pattern=r"^[A-Z]{3}$")] = "USD"
     input_microunits_per_million_tokens: int = Field(ge=0)
+    cached_input_microunits_per_million_tokens: int | None = Field(default=None, ge=0)
     output_microunits_per_million_tokens: int = Field(ge=0)
     pricing_version: Annotated[str, StringConstraints(min_length=1, max_length=64)]
     effective_date: date
 
-    def estimate_microunits(self, input_tokens: int, output_tokens: int) -> int:
+    def estimate_microunits(
+        self,
+        input_tokens: int,
+        output_tokens: int,
+        *,
+        cached_tokens: int = 0,
+    ) -> int:
         """Return a deterministic ceiling estimate, never an actual billed amount."""
-        input_cost = input_tokens * self.input_microunits_per_million_tokens
+        if input_tokens < 0 or output_tokens < 0 or cached_tokens < 0:
+            raise ValueError("Token counts cannot be negative")
+        if cached_tokens > input_tokens:
+            raise ValueError("Cached input tokens cannot exceed total input tokens")
+        cached_rate = (
+            self.cached_input_microunits_per_million_tokens
+            if self.cached_input_microunits_per_million_tokens is not None
+            else self.input_microunits_per_million_tokens
+        )
+        uncached_tokens = input_tokens - cached_tokens
+        input_cost = uncached_tokens * self.input_microunits_per_million_tokens
+        cached_cost = cached_tokens * cached_rate
         output_cost = output_tokens * self.output_microunits_per_million_tokens
-        return (input_cost + output_cost + 999_999) // 1_000_000
+        return (input_cost + cached_cost + output_cost + 999_999) // 1_000_000
 
 
 class ProviderDefinition(BaseModel):
@@ -233,6 +251,12 @@ class ProviderResponse(BaseModel):
     output_tokens: int = Field(ge=0)
     cached_tokens: int = Field(default=0, ge=0)
     actual_cost_microunits: int | None = Field(default=None, ge=0)
+
+    @model_validator(mode="after")
+    def validate_cached_tokens(self) -> "ProviderResponse":
+        if self.cached_tokens > self.input_tokens:
+            raise ValueError("Cached input tokens cannot exceed total input tokens")
+        return self
 
 
 class ProviderAttemptFailure(BaseModel):

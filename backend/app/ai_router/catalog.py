@@ -242,18 +242,18 @@ _OPENAI_SOL_PRICING = PricingMetadata(
     effective_date=date(2026, 9, 3),
 )
 
-# Source: https://ai.google.dev/gemini-api/docs/pricing, verified 2026-09-04.
-_GEMINI_FLASH_LITE_PRICING = PricingMetadata(
+_OPENAI_NANO_PRICING = PricingMetadata(
     currency="USD",
-    input_microunits_per_million_tokens=100_000,
+    input_microunits_per_million_tokens=50_000,
+    cached_input_microunits_per_million_tokens=5_000,
     output_microunits_per_million_tokens=400_000,
-    pricing_version="google-gemini-2026-09-04",
-    effective_date=date(2026, 9, 4),
+    pricing_version="openai-2026-09-05",
+    effective_date=date(2026, 9, 5),
 )
 
 
 def build_openai_staging_catalog() -> ModelCatalog:
-    """OpenAI staging catalog with complexity-aware quality routing."""
+    """OpenAI staging catalog with normal routing plus an evaluation-only Nano candidate."""
     providers = (
         ProviderDefinition(
             key="openai",
@@ -271,6 +271,22 @@ def build_openai_staging_catalog() -> ModelCatalog:
     )
 
     models = (
+        ModelDefinition(
+            provider_key="openai",
+            model_id="gpt-5-nano",
+            model_class=ModelClass.FAST,
+            enabled=True,
+            routing_enabled=False,
+            evaluation_enabled=True,
+            capabilities=capabilities,
+            context_limit=400_000,
+            output_limit=128_000,
+            max_sensitivity=DataSensitivity.PRIVATE,
+            quality_tier=QualityTier.FAST,
+            latency_tier=LatencyTier.LOW,
+            pricing=_OPENAI_NANO_PRICING,
+            fallback_priority=5,
+        ),
         ModelDefinition(
             provider_key="openai",
             model_id="gpt-5.6-luna",
@@ -318,39 +334,14 @@ def build_openai_staging_catalog() -> ModelCatalog:
     return ModelCatalog(providers, models)
 
 
-def build_staging_catalog(*, openai_enabled: bool, gemini_enabled: bool) -> ModelCatalog:
-    """Compose independently configured providers while keeping Gemini evaluation-only."""
+def build_staging_catalog(*, openai_enabled: bool) -> ModelCatalog:
+    """Compose the single-provider OpenAI staging catalog."""
     openai = build_openai_staging_catalog()
-    openai_provider = openai.provider("openai").model_copy(update={"enabled": openai_enabled})
-    openai_models = tuple(
+    provider = openai.provider("openai").model_copy(update={"enabled": openai_enabled})
+    models = tuple(
         model.model_copy(update={"enabled": openai_enabled}) for model in openai.all_models
     )
-
-    gemini_provider = ProviderDefinition(
-        key="gemini",
-        enabled=gemini_enabled,
-        max_sensitivity=DataSensitivity.PUBLIC,
-    )
-    gemini_model = ModelDefinition(
-        provider_key="gemini",
-        model_id="gemini-2.5-flash-lite",
-        model_class=ModelClass.FAST,
-        enabled=gemini_enabled,
-        routing_enabled=False,
-        evaluation_enabled=True,
-        capabilities=frozenset({ModelCapability.TEXT_GENERATION}),
-        context_limit=1_048_576,
-        output_limit=65_536,
-        max_sensitivity=DataSensitivity.PUBLIC,
-        quality_tier=QualityTier.FAST,
-        latency_tier=LatencyTier.LOW,
-        pricing=_GEMINI_FLASH_LITE_PRICING,
-        fallback_priority=100,
-    )
-    return ModelCatalog(
-        (openai_provider, gemini_provider),
-        (*openai_models, gemini_model),
-    )
+    return ModelCatalog((provider,), models)
 
 
 OPENAI_STAGING_CATALOG = build_openai_staging_catalog()

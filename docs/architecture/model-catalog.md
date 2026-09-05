@@ -10,37 +10,31 @@ Capabilities are declared independently (`TEXT_GENERATION`, `STRUCTURED_OUTPUT`,
 `STREAMING`, `AUDIO_REALTIME`, and `EMBEDDINGS`). A model is eligible only when it declares every
 required capability.
 
-Provider and model identifiers are unique. Models cannot reference unknown providers. REALTIME and
-EMBEDDING definitions must declare their matching capability. Disabled providers/models and
-deprecated models are never selected. `enabled` means the definition is operationally available;
+Provider and model identifiers are unique. Models cannot reference unknown providers. Disabled
+providers/models and deprecated models are never selected. `enabled` means operational availability;
 `routing_enabled` independently controls normal routing eligibility; and `evaluation_enabled`
-allows an explicitly invoked internal candidate evaluation. An enabled model that is neither
-routable nor evaluation-enabled is invalid.
+allows an explicitly invoked internal candidate evaluation.
 
-## Current staging providers
+## Current staging provider and models
 
-OpenAI remains the normal routed provider with GPT-5.6 Luna, Terra, and Sol. Their existing routing
-and privacy configuration is unchanged.
+OpenAI is the only external provider. GPT-5.6 Luna, Terra, and Sol retain their existing normal
+routing and privacy configuration. GPT-5 Nano (`gpt-5-nano`) is an evaluation-only candidate under
+the same provider: `evaluation_enabled=True`, `routing_enabled=False`.
 
-Google Gemini is independently optional and currently contains one candidate model:
-`gemini-2.5-flash-lite`. It declares only `TEXT_GENERATION`, because the first adapter does not
-implement structured output or tool calling. It is `evaluation_enabled=True` and
-`routing_enabled=False`, so its lower price cannot affect normal selection or fallback ordering.
-
-Gemini's pricing metadata uses Google's published Gemini API standard paid rates verified on
-2026-09-04: USD 0.10 per million input text/image/video tokens and USD 0.40 per million output
-tokens (including thinking tokens). Pricing metadata is evidence for cost estimation only and is
-not used to disguise candidate state.
+The Nano definition uses OpenAI API documentation verified on 2026-09-05: 400,000-token context,
+128,000-token maximum output, USD 0.05 per million input tokens, USD 0.005 per million cached input
+tokens, and USD 0.40 per million output tokens. OpenAI documents Responses API compatibility,
+streaming, function calling, and Structured Outputs. Lex currently exposes only capabilities safely
+implemented by its provider abstraction; candidate evaluation does not add a public tool surface.
 
 ## Privacy and promotion
 
-Privacy authorization is provider-specific. OpenAI's existing `PRIVATE` approval is not inherited
-by Gemini. The Gemini provider and candidate model are limited to `PUBLIC`; they have no PRIVATE,
-SENSITIVE, or CRITICAL approval.
+Nano inherits no new authorization merely because it shares the OpenAI provider. The existing
+OpenAI provider boundary remains approved through `PRIVATE`, while `SENSITIVE` and `CRITICAL` remain
+restricted. Existing consent, context gating, Memory gating, and trust boundaries are unchanged.
 
-Promoting a candidate later requires an explicit reviewed catalog change to `routing_enabled=True`.
-That promotion is separate from provider enablement and separate from any future privacy approval.
-Neither promotion nor a credential alone grants additional data sensitivity access.
+Promoting Nano later requires an explicit reviewed catalog/routing change. Price alone must never
+make a candidate routable or place it into fallback.
 
 The bundled default catalog remains intentionally non-operational: all placeholder providers/models
 are disabled. Operational catalog updates must be reviewed server-side because provider pricing,

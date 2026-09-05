@@ -206,9 +206,7 @@ def test_memory_dependent_chat_queries_memory_only_when_authorized() -> None:
                 assert disabled["memory_context_queried"] is False
                 assert disabled["memory_items_included"] == 0
 
-                authorized = await service.create_conversation(
-                    current, ConversationCreateRequest()
-                )
+                authorized = await service.create_conversation(current, ConversationCreateRequest())
                 await service.submit(
                     current,
                     authorized.id,

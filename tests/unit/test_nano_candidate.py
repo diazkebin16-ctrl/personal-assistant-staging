@@ -16,7 +16,10 @@ from backend.app.core.config import Settings
 from backend.app.security.classification import DataSensitivity
 
 
-def _request(complexity: Complexity = Complexity.LOW, sensitivity: DataSensitivity = DataSensitivity.PUBLIC) -> RoutingRequest:
+def _request(
+    complexity: Complexity = Complexity.LOW,
+    sensitivity: DataSensitivity = DataSensitivity.PUBLIC,
+) -> RoutingRequest:
     return RoutingRequest(
         task_type="assistant.response",
         complexity=complexity,

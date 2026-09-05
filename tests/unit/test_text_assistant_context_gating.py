@@ -2,12 +2,13 @@
 
 import json
 from datetime import UTC, datetime
+from typing import cast
 from uuid import uuid4
 
 from backend.app.memory.enums import MemoryClass, MemorySourceType
 from backend.app.memory.schemas import MemoryContextItem, MemoryContextPack
 from backend.app.security.classification import DataSensitivity
-from backend.app.text_assistant.context import build_context
+from backend.app.text_assistant.context import ConversationContextPack, build_context
 from backend.app.text_assistant.enums import MessageRole, MessageStatus
 from backend.app.text_assistant.models import ConversationMessage
 from backend.app.text_assistant.task_profile import (
@@ -61,8 +62,8 @@ def _pack(count: int = 4) -> MemoryContextPack:
     )
 
 
-def _payload(context, current: str) -> dict[str, object]:
-    return json.loads(context.provider_input(current))
+def _payload(context: ConversationContextPack, current: str) -> dict[str, object]:
+    return cast(dict[str, object], json.loads(context.provider_input(current)))
 
 
 def test_independent_request_releases_no_history_even_when_twelve_messages_exist() -> None:

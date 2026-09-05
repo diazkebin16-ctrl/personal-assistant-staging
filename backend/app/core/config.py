@@ -40,7 +40,6 @@ class Settings(BaseSettings):
         default=None, validation_alias="SUPABASE_SERVICE_ROLE_KEY"
     )
     openai_api_key: SecretStr | None = Field(default=None, validation_alias="OPENAI_API_KEY")
-    gemini_api_key: SecretStr | None = Field(default=None, validation_alias="GEMINI_API_KEY")
     sentry_dsn: SecretStr | None = Field(default=None, validation_alias="SENTRY_DSN")
     otel_enabled: bool = Field(default=False, validation_alias="OTEL_ENABLED")
     supabase_jwt_audience: str = Field(
@@ -122,7 +121,6 @@ class Settings(BaseSettings):
         "supabase_anon_key",
         "supabase_service_role_key",
         "openai_api_key",
-        "gemini_api_key",
         "sentry_dsn",
         "supabase_jwt_issuer",
         "supabase_jwks_url",

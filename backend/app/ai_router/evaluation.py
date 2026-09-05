@@ -1,4 +1,4 @@
-"""Internal explicit evaluation path for models excluded from normal routing."""
+"""Internal explicit evaluation path for candidate and routed-baseline models."""
 
 from dataclasses import dataclass
 from time import perf_counter
@@ -8,6 +8,7 @@ from backend.app.ai_router.enums import FailureCategory
 from backend.app.ai_router.policy import SensitivityRoutingPolicy
 from backend.app.ai_router.provider import ProviderFailure, ProviderRegistry
 from backend.app.ai_router.schemas import (
+    ModelDefinition,
     ModelReference,
     ProviderRequest,
     ProviderResponse,
@@ -24,6 +25,16 @@ class CandidateEvaluationResult:
     response: ProviderResponse
     latency_ms: int
     estimated_cost_microunits: int
+
+
+@dataclass(frozen=True, slots=True)
+class CandidateEvaluationAttempt:
+    """Provider outcome for benchmark aggregation without retaining the private prompt."""
+
+    model: ModelReference
+    succeeded: bool
+    result: CandidateEvaluationResult | None = None
+    failure_category: FailureCategory | None = None
 
 
 class CandidateEvaluator:
@@ -46,17 +57,60 @@ class CandidateEvaluator:
         routing_request: RoutingRequest,
         provider_request: ProviderRequest,
     ) -> CandidateEvaluationResult:
+        """Evaluate only a model explicitly marked as an evaluation candidate."""
         model = self.catalog.model(model_ref)
+        if not model.evaluation_enabled:
+            raise AIRoutingDeniedError
+        return await self._evaluate(model, model_ref, routing_request, provider_request)
+
+    async def evaluate_routing_baseline(
+        self,
+        model_ref: ModelReference,
+        routing_request: RoutingRequest,
+        provider_request: ProviderRequest,
+    ) -> CandidateEvaluationResult:
+        """Evaluate an already-routable baseline without changing candidate eligibility."""
+        model = self.catalog.model(model_ref)
+        if not model.routing_enabled:
+            raise AIRoutingDeniedError
+        return await self._evaluate(model, model_ref, routing_request, provider_request)
+
+    async def attempt(
+        self,
+        model_ref: ModelReference,
+        routing_request: RoutingRequest,
+        provider_request: ProviderRequest,
+        *,
+        routing_baseline: bool = False,
+    ) -> CandidateEvaluationAttempt:
+        """Record provider success/failure while allowing policy denials to remain fail-closed."""
+        try:
+            if routing_baseline:
+                result = await self.evaluate_routing_baseline(
+                    model_ref, routing_request, provider_request
+                )
+            else:
+                result = await self.evaluate(model_ref, routing_request, provider_request)
+        except ProviderFailure as exc:
+            return CandidateEvaluationAttempt(
+                model=model_ref,
+                succeeded=False,
+                failure_category=exc.category,
+            )
+        return CandidateEvaluationAttempt(model=model_ref, succeeded=True, result=result)
+
+    async def _evaluate(
+        self,
+        model: ModelDefinition,
+        model_ref: ModelReference,
+        routing_request: RoutingRequest,
+        provider_request: ProviderRequest,
+    ) -> CandidateEvaluationResult:
         provider_definition = self.catalog.provider(model.provider_key)
 
         if model_ref != ModelReference.from_definition(model):
             raise AIRoutingDeniedError
-        if (
-            not provider_definition.enabled
-            or not model.enabled
-            or model.deprecated
-            or not model.evaluation_enabled
-        ):
+        if not provider_definition.enabled or not model.enabled or model.deprecated:
             raise AIRoutingDeniedError
         if (
             provider_request.output_token_budget > routing_request.requested_output_tokens
@@ -79,9 +133,7 @@ class CandidateEvaluator:
             raise AIRoutingDeniedError
         if routing_request.requested_output_tokens > model.output_limit:
             raise AIRoutingDeniedError
-        total_tokens = (
-            routing_request.estimated_input_tokens + routing_request.requested_output_tokens
-        )
+        total_tokens = routing_request.estimated_input_tokens + routing_request.requested_output_tokens
         if total_tokens > model.context_limit:
             raise AIRoutingDeniedError
 
@@ -95,6 +147,7 @@ class CandidateEvaluator:
         estimated_cost = model.pricing.estimate_microunits(
             response.input_tokens,
             response.output_tokens,
+            cached_tokens=response.cached_tokens,
         )
         return CandidateEvaluationResult(
             model=model_ref,

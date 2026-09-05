@@ -19,37 +19,30 @@ execute tools, mutate permissions, create tasks, or perform external actions.
 6. An optional provider call uses a bounded adapter chain. Each attempt writes privacy-safe usage
    telemetry; provider output has no execution authority.
 
-## Gemini candidate evaluation
+## Evaluation-only model candidates
 
-Google Gemini 2.5 Flash-Lite is integrated as a second provider through the same `LLMProvider` and
-`ProviderRegistry` boundary used by OpenAI. Its stable model id is `gemini-2.5-flash-lite`.
+Evaluation candidates reuse the normal provider boundary but remain excluded from normal routing and
+fallback. `gpt-5-nano` is currently registered under the existing OpenAI provider with
+`evaluation_enabled=True` and `routing_enabled=False`. The same OpenAI credential, sensitivity
+policy, accounting boundary, and privacy rules apply. Luna remains the normal FAST model until a
+later reviewed routing decision explicitly changes that policy.
 
-The initial integration is deliberately candidate-only: the model is enabled when its backend
-credential is configured, has `evaluation_enabled=True`, and has `routing_enabled=False`. Therefore
-it is available to the internal `CandidateEvaluator` but cannot be selected by `AIRoutingPolicy` and
-cannot appear in the normal fallback chain. The evaluation path has no public endpoint and reuses
-the same capability, context/output, and provider-specific sensitivity checks before invoking an
-adapter.
-
-Promotion to normal routing requires a later explicit server-side decision to set
-`routing_enabled=True` after quality, latency, cost, privacy, and operational evidence has been
-reviewed. Candidate status must not be represented by falsified price, health, quality, or
-sensitivity metadata.
+`CandidateEvaluator` can explicitly compare an evaluation candidate with an already-routable
+baseline such as Luna. This does not promote the candidate or alter the baseline. Evaluation records
+provider success/failure, returned token usage including cached input when available, latency,
+estimated catalog cost, and ephemeral response text. Raw benchmark prompts are not logged.
 
 ## Provider-specific privacy
 
-Privacy approval is attached to each `ProviderDefinition`; approval for one external provider does
-not authorize another. OpenAI retains its existing approval through `PRIVATE`. Gemini is initially
-limited to `PUBLIC` and has no private, sensitive, or critical approval. `PRIVATE`, `SENSITIVE`, and
-`CRITICAL` content therefore fails closed before a Gemini adapter can be invoked. No external
-provider receives general access to user memory.
+OpenAI retains its existing approval through `PRIVATE`. Candidate status does not broaden that
+approval: `SENSITIVE` and `CRITICAL` continue to fail closed for external OpenAI models, and context
+or Memory is released only through the existing Text Assistant permission and relevance gates.
 
 ## Boundaries
 
 - The default catalog contains disabled placeholders only. No external provider is operational
-  without an explicitly approved server configuration and adapter.
-- OpenAI and Gemini credentials are independently optional backend secrets. The absence of one does
-  not disable the other; the absence of both preserves fail-closed behavior.
+  without explicitly approved server configuration and an adapter.
+- OpenAI credentials remain an optional backend secret; their absence preserves fail-closed behavior.
 - The Router receives context metadata, never unrestricted Memory database access.
 - FAST may escalate to STANDARD or ADVANCED; an unavailable advanced model never silently degrades
   to FAST.
@@ -68,6 +61,6 @@ is introduced.
 
 ## Provider SDKs
 
-The Gemini adapter uses Google's current Google Gen AI SDK (`google-genai`) and the stable Gemini API
-`v1` surface. Provider-specific SDK objects terminate at the adapter; the rest of the Router sees
-only `ProviderRequest`, `ProviderResponse`, and neutral failure categories.
+The OpenAI adapter uses the Responses API through the existing OpenAI SDK. Provider-specific SDK
+objects terminate at the adapter; the rest of the Router sees only `ProviderRequest`,
+`ProviderResponse`, and neutral failure categories.

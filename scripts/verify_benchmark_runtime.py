@@ -17,6 +17,7 @@ from backend.app.ai_router.benchmark import NANO_LUNA_BENCHMARK_CASES, Benchmark
 from backend.app.ai_router.benchmark_store import (
     BenchmarkCallRecord,
     BenchmarkResultStore,
+    BenchmarkRunDocument,
     BenchmarkStoreError,
     CheckpointState,
 )
@@ -95,15 +96,9 @@ def _finished(
 
 async def _complete_fake_call(
     store: BenchmarkResultStore,
-    document: object,
+    document: BenchmarkRunDocument,
     case: BenchmarkCase,
-) -> tuple[object, int]:
-    # Import type kept local to avoid broadening the public store surface.
-    from backend.app.ai_router.benchmark_store import BenchmarkRunDocument
-
-    if not isinstance(document, BenchmarkRunDocument):
-        raise TypeError("Unexpected benchmark document")
-
+) -> tuple[BenchmarkRunDocument, int]:
     document = store.checkpoint(document, _started(document.benchmark_run_id, case.key))
     provider = FakeProvider(
         "openai",
@@ -157,9 +152,14 @@ async def _run_complete(result_dir: Path, run_id: str) -> int:
     store = BenchmarkResultStore(result_dir)
     try:
         document = store.create(run_id)
-        document, provider_calls = await _complete_fake_call(store, document, _case("greeting"))
-    except (BenchmarkStoreError, RuntimeError, TypeError) as exc:
-        print(json.dumps({"status": "failed", "reason": type(exc).__name__}), flush=True)
+        document, provider_calls = await _complete_fake_call(
+            store, document, _case("greeting")
+        )
+    except (BenchmarkStoreError, RuntimeError) as exc:
+        print(
+            json.dumps({"status": "failed", "reason": type(exc).__name__}),
+            flush=True,
+        )
         return 2
     print(
         json.dumps(
@@ -184,10 +184,15 @@ async def _run_crash(result_dir: Path, run_id: str) -> int:
     store = BenchmarkResultStore(result_dir)
     try:
         document = store.create(run_id)
-        document, provider_calls = await _complete_fake_call(store, document, _case("greeting"))
+        document, provider_calls = await _complete_fake_call(
+            store, document, _case("greeting")
+        )
         document = store.checkpoint(document, _started(run_id, "simple_fact"))
-    except (BenchmarkStoreError, RuntimeError, TypeError) as exc:
-        print(json.dumps({"status": "failed", "reason": type(exc).__name__}), flush=True)
+    except (BenchmarkStoreError, RuntimeError) as exc:
+        print(
+            json.dumps({"status": "failed", "reason": type(exc).__name__}),
+            flush=True,
+        )
         return 2
     print(
         json.dumps(
@@ -213,7 +218,10 @@ def _run_resume(result_dir: Path, run_id: str) -> int:
     try:
         document = store.load(run_id)
     except BenchmarkStoreError as exc:
-        print(json.dumps({"status": "failed", "reason": type(exc).__name__}), flush=True)
+        print(
+            json.dumps({"status": "failed", "reason": type(exc).__name__}),
+            flush=True,
+        )
         return 2
     ambiguous = tuple(
         call
@@ -221,7 +229,10 @@ def _run_resume(result_dir: Path, run_id: str) -> int:
         if call.checkpoint_state is CheckpointState.IN_PROGRESS
     )
     if not ambiguous:
-        print(json.dumps({"status": "failed", "reason": "no_in_progress_checkpoint"}), flush=True)
+        print(
+            json.dumps({"status": "failed", "reason": "no_in_progress_checkpoint"}),
+            flush=True,
+        )
         return 2
     print(
         json.dumps(

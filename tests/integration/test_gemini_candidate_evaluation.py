@@ -4,7 +4,7 @@ import asyncio
 
 import pytest
 
-from backend.app.ai_router.catalog import build_staging_catalog
+from backend.app.ai_router.catalog import ModelCatalog, build_staging_catalog
 from backend.app.ai_router.enums import Complexity
 from backend.app.ai_router.evaluation import CandidateEvaluator
 from backend.app.ai_router.provider import FakeProvider, ProviderRegistry
@@ -18,9 +18,8 @@ from backend.app.core.errors import AIRoutingDeniedError
 from backend.app.security.classification import DataSensitivity
 
 
-def _candidate(catalog: object) -> ModelReference:
-    evaluation_models = getattr(catalog, "evaluation_models")
-    model = next(item for item in evaluation_models if item.provider_key == "gemini")
+def _candidate(catalog: ModelCatalog) -> ModelReference:
+    model = next(item for item in catalog.evaluation_models if item.provider_key == "gemini")
     return ModelReference.from_definition(model)
 
 

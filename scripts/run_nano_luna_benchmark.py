@@ -24,6 +24,7 @@ from backend.app.security.classification import DataSensitivity
 
 MIN_EVALUATION_OUTPUT_TOKENS = 256
 _ALLOWED_MODELS = ("gpt-5-nano", "gpt-5.6-luna")
+# CLI selectors are explicit safety controls for bounded diagnostic runs.
 
 
 @dataclass(frozen=True, slots=True)

@@ -86,9 +86,7 @@ def test_runtime_harness_has_no_model_credential_dependency() -> None:
 
 def test_persisted_payload_is_structured_and_recoverable(tmp_path: Path) -> None:
     assert asyncio.run(verifier._run_complete(tmp_path, "runtime-json")) == 0
-    payload = json.loads(
-        (tmp_path / "runtime-json" / "result.json").read_text(encoding="utf-8")
-    )
+    payload = json.loads((tmp_path / "runtime-json" / "result.json").read_text(encoding="utf-8"))
     assert payload["benchmark_run_id"] == "runtime-json"
     assert payload["aggregates"]["attempted_calls"] == 1
     assert payload["calls"][0]["checkpoint_state"] == "finished"

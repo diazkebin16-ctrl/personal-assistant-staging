@@ -129,7 +129,25 @@ _MEMORY_REFERENCE_TOKENS = frozenset(
 )
 _FIRST_PERSON_POSSESSIVES = frozenset({"my", "mi", "mis"})
 _PERSONAL_FACT_QUESTION_WORDS = frozenset(
-    {"what", "which", "how", "where", "when", "qué", "que", "cuál", "cual", "cuáles", "cuales", "cómo", "como", "dónde", "donde", "cuándo", "cuando"}
+    {
+        "what",
+        "which",
+        "how",
+        "where",
+        "when",
+        "qué",
+        "que",
+        "cuál",
+        "cual",
+        "cuáles",
+        "cuales",
+        "cómo",
+        "como",
+        "dónde",
+        "donde",
+        "cuándo",
+        "cuando",
+    }
 )
 
 _MEDIUM_TASK_OPERATORS = (

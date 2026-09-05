@@ -5,7 +5,7 @@ import asyncio
 from backend.app.ai_router.catalog import ModelCatalog, build_staging_catalog
 from backend.app.ai_router.enums import Complexity, FailureCategory, ModelCapability
 from backend.app.ai_router.evaluation import CandidateEvaluator
-from backend.app.ai_router.provider import FakeProvider, ProviderFailure, ProviderRegistry
+from backend.app.ai_router.provider import FakeProvider, ProviderRegistry
 from backend.app.ai_router.schemas import (
     ModelReference,
     ProviderRequest,
@@ -76,7 +76,7 @@ def test_candidate_attempt_records_provider_failure_without_prompt_logging_contr
         catalog = build_staging_catalog(openai_enabled=True)
         provider = FakeProvider(
             "openai",
-            outcomes=(ProviderFailure(FailureCategory.RATE_LIMITED),),
+            outcomes=(FailureCategory.RATE_LIMITED,),
         )
         evaluator = CandidateEvaluator(catalog, ProviderRegistry((provider,)))
         attempt = await evaluator.attempt(

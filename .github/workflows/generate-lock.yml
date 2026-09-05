@@ -2,6 +2,11 @@ name: Generate uv lock
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - ai3/gemini-evaluation-candidate
+    paths:
+      - pyproject.toml
 
 permissions:
   contents: read

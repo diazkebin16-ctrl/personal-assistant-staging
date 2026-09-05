@@ -24,7 +24,9 @@ class RecordingObserver:
         self.events.append(event)
 
     def context_event(self) -> TextAssistantMetricEvent:
-        matches = [event for event in self.events if event.name == "text_assistant.context.selected"]
+        matches = [
+            event for event in self.events if event.name == "text_assistant.context.selected"
+        ]
         assert matches
         return matches[-1]
 

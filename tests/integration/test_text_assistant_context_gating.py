@@ -80,7 +80,7 @@ def test_independent_chat_with_history_and_memory_permission_queries_no_memory()
                 observer = RecordingObserver()
                 service.observer = observer
 
-                async def fail_if_memory_queried(*args, **kwargs):
+                async def fail_if_memory_queried(*args: object, **kwargs: object) -> None:
                     del args, kwargs
                     raise AssertionError("independent chat must not query Memory")
 
@@ -178,7 +178,9 @@ def test_memory_dependent_chat_queries_memory_only_when_authorized() -> None:
                 service.observer = observer
                 calls = 0
 
-                async def memory_context(*args, **kwargs):
+                async def memory_context(
+                    *args: object, **kwargs: object
+                ) -> SimpleNamespace:
                     nonlocal calls
                     del args, kwargs
                     calls += 1

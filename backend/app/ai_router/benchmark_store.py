@@ -53,7 +53,7 @@ class BenchmarkCallRecord(BaseModel):
     timestamp: datetime
 
     @model_validator(mode="after")
-    def validate_checkpoint_shape(self) -> "BenchmarkCallRecord":
+    def validate_checkpoint_shape(self) -> BenchmarkCallRecord:
         if not _RUN_ID_PATTERN.fullmatch(self.benchmark_run_id):
             raise ValueError("Invalid benchmark_run_id")
         if self.cached_input_tokens > self.input_tokens:
@@ -117,7 +117,7 @@ class BenchmarkAggregates(BaseModel):
     estimated_cost_microunits: int = Field(ge=0)
 
     @classmethod
-    def from_calls(cls, calls: tuple[BenchmarkCallRecord, ...]) -> "BenchmarkAggregates":
+    def from_calls(cls, calls: tuple[BenchmarkCallRecord, ...]) -> BenchmarkAggregates:
         finished = tuple(
             call for call in calls if call.checkpoint_state is CheckpointState.FINISHED
         )
@@ -151,7 +151,7 @@ class BenchmarkRunDocument(BaseModel):
     aggregates: BenchmarkAggregates
 
     @model_validator(mode="after")
-    def validate_run(self) -> "BenchmarkRunDocument":
+    def validate_run(self) -> BenchmarkRunDocument:
         if not _RUN_ID_PATTERN.fullmatch(self.benchmark_run_id):
             raise ValueError("Invalid benchmark_run_id")
         keys: set[tuple[str, str]] = set()
@@ -166,7 +166,7 @@ class BenchmarkRunDocument(BaseModel):
         return self
 
     @classmethod
-    def empty(cls, run_id: str, *, now: datetime | None = None) -> "BenchmarkRunDocument":
+    def empty(cls, run_id: str, *, now: datetime | None = None) -> BenchmarkRunDocument:
         timestamp = now or datetime.now(UTC)
         return cls(
             benchmark_run_id=run_id,

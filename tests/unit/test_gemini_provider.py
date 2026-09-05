@@ -120,9 +120,7 @@ def test_gemini_provider_normalizes_api_statuses(
 def test_gemini_provider_rejects_empty_or_missing_text() -> None:
     provider = GeminiProvider(
         "test-key",
-        client=_FakeClient(
-            _FakeModels(response=SimpleNamespace(text="", usage_metadata=None))
-        ),
+        client=_FakeClient(_FakeModels(response=SimpleNamespace(text="", usage_metadata=None))),
     )
     with pytest.raises(ProviderFailure) as failure:
         asyncio.run(

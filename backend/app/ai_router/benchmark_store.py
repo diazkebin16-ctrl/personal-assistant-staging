@@ -118,11 +118,11 @@ class BenchmarkAggregates(BaseModel):
 
     @classmethod
     def from_calls(cls, calls: tuple[BenchmarkCallRecord, ...]) -> "BenchmarkAggregates":
-        finished = tuple(call for call in calls if call.checkpoint_state is CheckpointState.FINISHED)
+        finished = tuple(
+            call for call in calls if call.checkpoint_state is CheckpointState.FINISHED
+        )
         completed = tuple(
-            call
-            for call in finished
-            if call.normalized_status is ProviderResponseStatus.COMPLETED
+            call for call in finished if call.normalized_status is ProviderResponseStatus.COMPLETED
         )
         return cls(
             attempted_calls=len(calls),
@@ -133,9 +133,7 @@ class BenchmarkAggregates(BaseModel):
             output_tokens=sum(call.output_tokens for call in finished),
             reasoning_tokens=sum(call.reasoning_tokens for call in finished),
             latency_ms=sum(call.latency_ms for call in finished),
-            estimated_cost_microunits=sum(
-                call.estimated_cost_microunits for call in finished
-            ),
+            estimated_cost_microunits=sum(call.estimated_cost_microunits for call in finished),
         )
 
 

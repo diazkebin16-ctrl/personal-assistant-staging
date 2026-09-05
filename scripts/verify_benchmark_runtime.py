@@ -1,7 +1,7 @@
 """Verify benchmark persistence and fail-closed resume with FakeProvider only.
 
-This administrative harness never reads model credentials and never constructs an
-OpenAIProvider. It is intended to be run through ``railway ssh`` inside the
+This administrative harness never reads model credentials and never constructs a
+real network provider. It is intended to be run through ``railway ssh`` inside the
 normal backend runtime where the benchmark volume is mounted.
 """
 
